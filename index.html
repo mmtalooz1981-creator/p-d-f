@@ -18,607 +18,2904 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+
+    <style>
+      :root {
+        --bg-canvas: #f8fafc;
+        --bg-surface: #ffffff;
+        --bg-subtle: #f1f5f9;
+        --border-hairline: #e2e8f0;
+        --border-input: #cbd5e1;
+        --text-primary: #0f172a;
+        --text-secondary: #475569;
+        --text-muted: #64748b;
+        --accent: #1565c0;
+        --accent-hover: #0d47a1;
+        --accent-soft: rgba(21, 101, 192, 0.1);
+        --accent-border: rgba(21, 101, 192, 0.35);
+        --success: #15803d;
+        --success-bg: #f0fdf4;
+        --danger: #dc2626;
+        --danger-bg: #fef2f2;
+        --radius-lg: 12px;
+        --radius-md: 8px;
+        --radius-sm: 6px;
+        --font-display: "Cairo", "IBM Plex Sans Arabic", system-ui, sans-serif;
+        --font-sans: "IBM Plex Sans Arabic", "Cairo", system-ui, sans-serif;
+        --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+        --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background-color: var(--bg-canvas);
+        color: var(--text-primary);
+        font-family: var(--font-sans);
+        font-size: 15px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+        padding-bottom: 64px;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4 {
+        margin: 0;
+        font-family: var(--font-display);
+        text-wrap: balance;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      button,
+      input {
+        font-family: inherit;
+      }
+
+      button:focus-visible,
+      a:focus-visible,
+      input:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      .mono {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .tabular {
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* Top Navigation Bar (Strict 3-Zone Contract) */
+      .topbar {
+        background: var(--bg-surface);
+        border-bottom: 1px solid var(--border-hairline);
+        z-index: 30;
+      }
+
+      .topbar-inner {
+        max-width: 1360px;
+        margin: 0 auto;
+        padding: 0 16px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+      }
+
+      .brand-wordmark {
+        font-family: var(--font-display);
+        font-size: 19px;
+        font-weight: 800;
+        color: var(--accent);
+        text-decoration: none;
+        white-space: nowrap;
+        flex-shrink: 0;
+        letter-spacing: -0.01em;
+      }
+
+      .top-nav {
+        display: none;
+        align-items: center;
+        gap: 28px;
+      }
+
+      .top-nav-link {
+        position: relative;
+        background: none;
+        border: none;
+        padding: 20px 0;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: color 150ms var(--ease);
+      }
+
+      .top-nav-link:hover {
+        color: var(--text-primary);
+      }
+
+      .top-nav-link.active {
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      .top-nav-link.active::after {
+        content: "";
+        position: absolute;
+        inset-inline: 0;
+        bottom: 0;
+        height: 2px;
+        background: var(--accent);
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 40px;
+        padding: 8px 16px;
+        border-radius: var(--radius-md);
+        border: 1px solid transparent;
+        font-size: 14px;
+        font-weight: 600;
+        white-space: nowrap;
+        flex-shrink: 0;
+        cursor: pointer;
+        text-decoration: none;
+        transition: background-color 150ms var(--ease), border-color 150ms var(--ease),
+          color 150ms var(--ease);
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: #ffffff;
+      }
+
+      .btn-primary:hover:not(:disabled) {
+        background: var(--accent-hover);
+      }
+
+      .btn-primary:disabled {
+        background: #cbd5e1;
+        color: #64748b;
+        cursor: not-allowed;
+      }
+
+      .btn-secondary {
+        background: var(--bg-surface);
+        color: var(--text-primary);
+        border-color: var(--border-input);
+      }
+
+      .btn-secondary:hover:not(:disabled) {
+        background: var(--bg-canvas);
+      }
+
+      .btn-subtle {
+        background: var(--bg-subtle);
+        color: var(--text-secondary);
+        min-height: 32px;
+        padding: 6px 12px;
+        font-size: 12px;
+        border-radius: var(--radius-sm);
+      }
+
+      .btn-subtle:hover:not(:disabled) {
+        background: #e2e8f0;
+        color: var(--text-primary);
+      }
+
+      .btn-ghost {
+        background: transparent;
+        color: var(--text-secondary);
+        min-height: 34px;
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+      .btn-ghost:hover:not(:disabled) {
+        background: var(--bg-subtle);
+        color: var(--text-primary);
+      }
+
+      .btn-ghost-accent {
+        background: transparent;
+        color: var(--accent);
+        min-height: 34px;
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+      .btn-ghost-accent:hover:not(:disabled) {
+        background: var(--accent-soft);
+      }
+
+      .btn-ghost-danger:hover:not(:disabled) {
+        background: var(--danger-bg);
+        color: var(--danger);
+      }
+
+      .btn-full {
+        width: 100%;
+        min-height: 44px;
+      }
+
+      .btn-icon {
+        width: 36px;
+        height: 36px;
+        min-height: 36px;
+        padding: 0;
+        border: 1px solid var(--border-hairline);
+        background: var(--bg-surface);
+        color: var(--text-secondary);
+      }
+
+      .btn-icon:hover:not(:disabled) {
+        background: var(--bg-canvas);
+        color: var(--text-primary);
+      }
+
+      .btn-icon:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* Main Layout Container */
+      .main-container {
+        flex: 1;
+        width: 100%;
+        max-width: 1360px;
+        margin: 0 auto;
+        padding: 20px 16px 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .workspace-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 24px;
+        align-items: start;
+      }
+
+      /* Single-Elevation Structural Panel */
+      .panel {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-hairline);
+        border-radius: var(--radius-lg);
+      }
+
+      .panel-section {
+        padding: 20px;
+        border-bottom: 1px solid var(--border-hairline);
+      }
+
+      .panel-section:last-child {
+        border-bottom: none;
+      }
+
+      .panel-section-tinted {
+        background: rgba(248, 250, 252, 0.7);
+        padding: 14px 20px;
+      }
+
+      /* Active Document Row */
+      .doc-summary {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        min-width: 0;
+      }
+
+      .doc-icon-box {
+        width: 42px;
+        height: 42px;
+        border-radius: var(--radius-md);
+        background: var(--bg-canvas);
+        border: 1px solid var(--border-hairline);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--accent);
+        flex-shrink: 0;
+      }
+
+      .doc-meta-wrap {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .doc-kicker {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-muted);
+      }
+
+      .doc-filename {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: 2px;
+      }
+
+      .doc-submeta {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 4px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .doc-actions {
+        margin-top: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .doc-actions .btn-primary {
+        flex: 1;
+        min-width: 150px;
+      }
+
+      /* Progress Bar */
+      .progress-box {
+        margin-top: 16px;
+      }
+
+      .progress-head {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-bottom: 6px;
+      }
+
+      .progress-track {
+        height: 6px;
+        width: 100%;
+        background: var(--bg-subtle);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: var(--accent);
+        width: 8%;
+        transition: width 150ms var(--ease);
+      }
+
+      /* Segmented Tool Control */
+      .segmented {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 4px;
+        padding: 4px;
+        background: var(--bg-subtle);
+        border-radius: var(--radius-md);
+      }
+
+      .seg-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 38px;
+        padding: 6px 8px;
+        border: none;
+        border-radius: var(--radius-sm);
+        background: transparent;
+        color: var(--text-secondary);
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: background-color 150ms var(--ease), color 150ms var(--ease);
+      }
+
+      .seg-btn:hover {
+        color: var(--text-primary);
+      }
+
+      .seg-btn.active {
+        background: var(--bg-surface);
+        color: var(--accent);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+      }
+
+      /* Form Elements */
+      .tool-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .tool-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .tool-desc {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-top: 4px;
+      }
+
+      .field-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+      }
+
+      .text-input {
+        width: 100%;
+        min-height: 42px;
+        padding: 9px 12px;
+        border: 1px solid var(--border-input);
+        border-radius: var(--radius-md);
+        background: var(--bg-surface);
+        color: var(--text-primary);
+        font-size: 14px;
+        transition: border-color 150ms var(--ease), box-shadow 150ms var(--ease);
+      }
+
+      .text-input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.14);
+      }
+
+      .text-input.ltr {
+        direction: ltr;
+        text-align: left;
+      }
+
+      .text-input.centered {
+        direction: ltr;
+        text-align: center;
+      }
+
+      .field-hint {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 6px;
+      }
+
+      .field-hint.error {
+        color: var(--danger);
+      }
+
+      .two-col-fields {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .preset-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .option-grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .option-grid-5 {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .choice-btn {
+        min-height: 36px;
+        padding: 6px 4px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-hairline);
+        background: var(--bg-surface);
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: all 150ms var(--ease);
+      }
+
+      .choice-btn:hover {
+        background: var(--bg-canvas);
+      }
+
+      .choice-btn.active {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .range-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        margin-bottom: 6px;
+      }
+
+      .range-input {
+        width: 100%;
+        accent-color: var(--accent);
+        cursor: pointer;
+      }
+
+      .color-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .swatch-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .color-swatch {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 2px solid #ffffff;
+        box-shadow: 0 0 0 1px var(--border-input);
+        cursor: pointer;
+        transition: transform 150ms var(--ease);
+      }
+
+      .color-swatch.active {
+        border-color: var(--text-primary);
+        transform: scale(1.12);
+      }
+
+      /* Accessible Status Footer Banner */
+      .status-banner {
+        padding: 14px 20px;
+        border-bottom-left-radius: var(--radius-lg);
+        border-bottom-right-radius: var(--radius-lg);
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        background: rgba(248, 250, 252, 0.85);
+        color: var(--text-secondary);
+      }
+
+      .status-banner.success {
+        background: var(--success-bg);
+        color: var(--success);
+      }
+
+      .status-banner.error {
+        background: var(--danger-bg);
+        color: var(--danger);
+      }
+
+      .status-icon {
+        flex-shrink: 0;
+        margin-top: 2px;
+        display: flex;
+      }
+
+      /* Preview Stage */
+      .stage-panel {
+        display: flex;
+        flex-direction: column;
+        min-height: 480px;
+        overflow: hidden;
+        transition: border-color 150ms var(--ease), background-color 150ms var(--ease);
+      }
+
+      .stage-panel.drag-active {
+        border-color: var(--accent);
+      }
+
+      .stage-header {
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border-hairline);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .stage-header-info {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .stage-title {
+        font-size: 14px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .stage-subtitle {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 2px;
+      }
+
+      .page-nav {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      .page-counter {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        padding: 0 6px;
+        white-space: nowrap;
+      }
+
+      .stage-viewport {
+        flex: 1;
+        background: var(--bg-canvas);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        min-width: 0;
+      }
+
+      .empty-dropzone {
+        max-width: 440px;
+        width: 100%;
+        text-align: center;
+        padding: 28px 12px;
+      }
+
+      .empty-icon-box {
+        width: 56px;
+        height: 56px;
+        margin: 0 auto 18px;
+        border-radius: var(--radius-lg);
+        background: var(--bg-surface);
+        border: 1px solid var(--border-hairline);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--accent);
+      }
+
+      .empty-title {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .empty-desc {
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin-bottom: 22px;
+      }
+
+      .empty-cta-row {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        justify-content: center;
+      }
+
+      .canvas-stage-wrap {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .paper-frame {
+        position: relative;
+        background: #ffffff;
+        border: 1px solid var(--border-hairline);
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+        max-width: 100%;
+        overflow: hidden;
+      }
+
+      .paper-frame canvas {
+        display: block;
+        max-width: 100%;
+        height: auto;
+      }
+
+      .wm-live-overlay {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+        user-select: none;
+      }
+
+      .wm-overlay-flex {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 16px;
+      }
+
+      .wm-overlay-top {
+        align-items: flex-start;
+        padding-top: 6%;
+      }
+
+      .wm-overlay-bottom {
+        align-items: flex-end;
+        padding-bottom: 6%;
+      }
+
+      .wm-overlay-tiled {
+        position: absolute;
+        inset: -35%;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 36px;
+        place-items: center;
+        transform: rotate(-30deg);
+      }
+
+      .canvas-loading {
+        position: absolute;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.78);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary);
+      }
+
+      .quick-pages {
+        width: 100%;
+        max-width: 680px;
+      }
+
+      .quick-pages-head {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+      }
+
+      .quick-pages-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .page-chip-btn {
+        min-width: 34px;
+        height: 32px;
+        padding: 0 8px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-hairline);
+        background: var(--bg-surface);
+        color: var(--text-secondary);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        cursor: pointer;
+        transition: all 150ms var(--ease);
+      }
+
+      .page-chip-btn:hover {
+        background: var(--bg-canvas);
+      }
+
+      .page-chip-btn.in-split {
+        background: var(--accent-soft);
+        border-color: var(--accent-border);
+        color: var(--accent);
+      }
+
+      .page-chip-btn.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #ffffff;
+        font-weight: 600;
+      }
+
+      /* Outputs Panel */
+      .outputs-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border-hairline);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .outputs-title {
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .outputs-sub {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 2px;
+      }
+
+      .outputs-bulk {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .outputs-empty {
+        padding: 36px 20px;
+        text-align: center;
+        font-size: 14px;
+        color: var(--text-muted);
+      }
+
+      .outputs-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .output-item {
+        padding: 14px 20px;
+        border-top: 1px solid var(--border-hairline);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        transition: background-color 150ms var(--ease);
+      }
+
+      .output-item:first-child {
+        border-top: none;
+      }
+
+      .output-item:hover {
+        background: rgba(248, 250, 252, 0.8);
+      }
+
+      .output-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+      }
+
+      .output-thumb {
+        width: 44px;
+        height: 44px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-hairline);
+        overflow: hidden;
+        background: var(--bg-canvas);
+        padding: 0;
+        flex-shrink: 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--accent);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .output-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .output-info {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .output-name {
+        font-size: 14px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .output-meta {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 2px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .output-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+
+      /* Footer */
+      .site-footer {
+        display: none;
+        background: var(--bg-surface);
+        border-top: 1px solid var(--border-hairline);
+        margin-top: auto;
+      }
+
+      .footer-inner {
+        max-width: 1360px;
+        margin: 0 auto;
+        padding: 16px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      /* Mobile Bottom Navigation (Compact 56px, under 15% viewport height) */
+      .mobile-bottom-nav {
+        position: fixed;
+        bottom: 0;
+        inset-inline: 0;
+        height: 56px;
+        background: var(--bg-surface);
+        border-top: 1px solid var(--border-hairline);
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        z-index: 30;
+      }
+
+      .mobile-nav-btn {
+        border: none;
+        background: transparent;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        cursor: pointer;
+      }
+
+      .mobile-nav-btn.active {
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      /* Lightbox Preview Modal */
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        background: rgba(2, 6, 23, 0.76);
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-hairline);
+        border-radius: var(--radius-lg);
+        max-width: 920px;
+        width: 100%;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .modal-head {
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border-hairline);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .modal-title {
+        font-size: 14px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .modal-body {
+        flex: 1;
+        overflow: auto;
+        background: var(--bg-subtle);
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-body img {
+        max-width: 100%;
+        max-height: 75vh;
+        object-fit: contain;
+        background: #ffffff;
+        border: 1px solid var(--border-hairline);
+      }
+
+      /* Responsive Breakpoints */
+      @media (min-width: 640px) {
+        .topbar-inner {
+          padding: 0 24px;
+        }
+        .main-container {
+          padding: 24px 24px 36px;
+        }
+        .empty-cta-row {
+          flex-direction: row;
+        }
+        .output-item {
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
+        }
+      }
+
+      @media (min-width: 768px) {
+        body {
+          padding-bottom: 0;
+        }
+        .topbar {
+          position: sticky;
+          top: 0;
+        }
+        .topbar-inner {
+          height: 64px;
+        }
+        .top-nav {
+          display: flex;
+        }
+        .mobile-bottom-nav {
+          display: none;
+        }
+        .site-footer {
+          display: block;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .topbar-inner,
+        .footer-inner {
+          padding-inline: 32px;
+        }
+        .main-container {
+          padding: 28px 32px 40px;
+        }
+        .workspace-grid {
+          grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+        }
+        .stage-panel {
+          min-height: 680px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+    </style>
   </head>
-  <body class="min-h-screen flex flex-col bg-[#F8FAFC] text-slate-900 antialiased selection:bg-[#1565C0]/15 selection:text-[#1565C0] pb-16 md:pb-0">
-    <!-- Hidden Native PDF File Picker -->
+
+  <body>
     <input id="pdf-file-input" type="file" accept="application/pdf,.pdf" class="hidden" />
 
-    <!-- Top Bar (Strict 3-Zone Contract) -->
-    <header class="bg-white border-b border-slate-200 md:sticky md:top-0 z-30">
-      <div class="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-8">
-        <!-- Zone 1: Single-line Brand Wordmark -->
-        <a
-          href="#workspace"
-          class="font-display text-lg sm:text-xl font-extrabold tracking-tight text-[#1565C0] whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565C0] rounded"
-        >
-          موعد اللوز PDF PRO
-        </a>
+    <!-- Top Bar (3 Zones: Brand Wordmark — Nav Links — Primary CTA) -->
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a href="#workspace" class="brand-wordmark">موعد اللوز PDF PRO</a>
 
-        <!-- Zone 2: 4 Clean Single-Line Navigation Links -->
-        <nav aria-label="أدوات المعالجة" class="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600">
-          <button
-            type="button"
-            data-nav-tab="split"
-            class="nav-tab-btn relative py-5 transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer text-[#1565C0] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565C0] rounded-sm"
-          >
-            <span>تجزئة الملف</span>
-            <span data-nav-indicator aria-hidden="true" class="absolute inset-x-0 bottom-0 h-0.5 bg-[#1565C0]"></span>
-          </button>
-          <button
-            type="button"
-            data-nav-tab="png"
-            class="nav-tab-btn relative py-5 transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer text-slate-600 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565C0] rounded-sm"
-          >
-            <span>صور PNG</span>
-            <span data-nav-indicator aria-hidden="true" class="hidden absolute inset-x-0 bottom-0 h-0.5 bg-[#1565C0]"></span>
-          </button>
-          <button
-            type="button"
-            data-nav-tab="watermark"
-            class="nav-tab-btn relative py-5 transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer text-slate-600 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565C0] rounded-sm"
-          >
-            <span>علامة مائية</span>
-            <span data-nav-indicator aria-hidden="true" class="hidden absolute inset-x-0 bottom-0 h-0.5 bg-[#1565C0]"></span>
-          </button>
-          <button
-            id="nav-outputs-btn"
-            type="button"
-            class="relative py-5 text-slate-600 hover:text-slate-900 transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565C0] rounded-sm"
-          >
-            الملفات الناتجة
-          </button>
+        <nav class="top-nav" aria-label="أدوات المعالجة">
+          <button type="button" class="top-nav-link active" data-nav-tab="split">تجزئة الملف</button>
+          <button type="button" class="top-nav-link" data-nav-tab="png">صور PNG</button>
+          <button type="button" class="top-nav-link" data-nav-tab="watermark">علامة مائية</button>
+          <button type="button" id="nav-outputs-btn" class="top-nav-link">الملفات الناتجة</button>
         </nav>
 
-        <!-- Zone 3: Single Primary Action CTA -->
-        <div class="shrink-0">
-          <button
-            id="header-pick-btn"
-            type="button"
-            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#1565C0] hover:bg-[#0D47A1] disabled:opacity-50 rounded-lg transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#1565C0]"
-          >
-            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            <span>اختيار PDF</span>
-          </button>
-        </div>
+        <button id="header-pick-btn" type="button" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          <span>اختيار PDF</span>
+        </button>
       </div>
     </header>
 
-    <!-- Main Workspace -->
-    <main id="workspace" class="flex-1 w-full max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 space-y-6">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <!-- Controls Column (5 cols) -->
-        <div class="lg:col-span-5">
-          <div class="bg-white border border-slate-200 rounded-xl divide-y divide-slate-200">
-            <!-- Section 1: Active File Summary -->
-            <div class="p-5 sm:p-6">
-              <div class="flex items-start gap-3 min-w-0">
-                <div class="w-10 h-10 rounded-lg bg-[#F8FAFC] border border-slate-200 flex items-center justify-center text-[#1565C0] shrink-0 mt-0.5">
-                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-                    <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-                    <path d="M10 9H8" />
-                    <path d="M16 13H8" />
-                    <path d="M16 17H8" />
-                  </svg>
-                </div>
-                <div class="min-w-0 flex-1">
-                  <p class="text-xs font-medium text-slate-500">الملف النشط</p>
-                  <p id="active-file-name" class="text-sm sm:text-base font-bold text-slate-900 truncate mt-0.5" dir="auto">
-                    لم يتم اختيار ملف
-                  </p>
-                  <p id="active-file-meta" class="text-xs text-slate-500 mt-1 tabular-nums">
-                    اختر ملف PDF من جهازك أو جرّب الملف النموذجي
-                  </p>
-                </div>
-              </div>
-
-              <div class="mt-4 flex flex-wrap items-center gap-2.5">
-                <button
-                  id="panel-pick-btn"
-                  type="button"
-                  class="flex-1 min-w-[150px] inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-[#1565C0] hover:bg-[#0D47A1] disabled:opacity-50 rounded-lg transition-colors duration-150 whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#1565C0]"
-                >
-                  <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="17 8 12 3 7 8" />
-                    <line x1="12" y1="3" x2="12" y2="15" />
-                  </svg>
-                  <span id="panel-pick-label">اختيار ملف PDF</span>
-                </button>
-
-                <button
-                  id="panel-sample-btn"
-                  type="button"
-                  class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 text-sm font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors duration-150 whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565C0]"
-                >
-                  <span>ملف نموذجي</span>
-                </button>
-              </div>
-
-              <!-- Progress Bar -->
-              <div id="progress-wrapper" class="hidden mt-4" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                <div class="flex items-center justify-between text-xs text-slate-600 mb-1.5">
-                  <span>جارٍ المعالجة...</span>
-                  <span id="progress-label" class="font-mono tabular-nums font-medium">0%</span>
-                </div>
-                <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div id="progress-bar" class="h-full bg-[#1565C0] transition-all duration-150" style="width: 8%"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Section 2: Segmented Tool Switcher -->
-            <div class="p-4 sm:px-6 bg-[#F8FAFC]/60">
-              <div role="tablist" aria-label="اختيار الأداة" class="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-lg">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected="true"
-                  data-seg-tab="split"
-                  class="seg-tab-btn inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs sm:text-sm font-semibold rounded-md transition-colors duration-150 whitespace-nowrap cursor-pointer bg-white text-[#1565C0] shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565C0]"
-                >
-                  <span>تجزئة</span>
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected="false"
-                  data-seg-tab="png"
-                  class="seg-tab-btn inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs sm:text-sm font-semibold rounded-md transition-colors duration-150 whitespace-nowrap cursor-pointer text-slate-600 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565C0]"
-                >
-                  <span>صور PNG</span>
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected="false"
-                  data-seg-tab="watermark"
-                  class="seg-tab-btn inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs sm:text-sm font-semibold rounded-md transition-colors duration-150 whitespace-nowrap cursor-pointer text-slate-600 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1565C0]"
-                >
-                  <span>علامة مائية</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Section 3: Active Tool Forms -->
-            <div class="p-5 sm:p-6">
-              <!-- Panel 0: Split PDF -->
-              <div id="tool-panel-split" class="space-y-4">
-                <div>
-                  <h1 class="text-xl font-bold text-slate-900">تجزئة ملف PDF</h1>
-                  <p class="text-sm text-slate-600 mt-1">
-                    أدخل نطاقات الصفحات مفصولة بفاصلة لإنشاء ملف PDF مستقل لكل نطاق.
-                  </p>
-                </div>
-
-                <div>
-                  <label for="split-ranges-input" class="block text-sm font-semibold text-slate-800 mb-1.5">
-                    نطاقات الصفحات
-                  </label>
-                  <input
-                    id="split-ranges-input"
-                    type="text"
-                    dir="ltr"
-                    value="1-3,4-6"
-                    placeholder="1-3,4-6,7-10"
-                    class="w-full px-3.5 py-2.5 text-sm font-mono text-left bg-white border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/20"
-                  />
-                  <p id="split-ranges-feedback" class="hidden text-xs mt-1.5 tabular-nums"></p>
-                </div>
-
-                <div id="split-presets" class="hidden flex flex-wrap items-center gap-2">
-                  <button
-                    id="preset-half-btn"
-                    type="button"
-                    class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200/80 rounded-md transition-colors whitespace-nowrap cursor-pointer"
-                  >
-                    تقسيم إلى نصفين
-                  </button>
-                  <button
-                    id="preset-every-btn"
-                    type="button"
-                    class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200/80 rounded-md transition-colors whitespace-nowrap cursor-pointer"
-                  >
-                    كل صفحة في ملف
-                  </button>
-                  <button
-                    id="preset-first-btn"
-                    type="button"
-                    class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200/80 rounded-md transition-colors whitespace-nowrap cursor-pointer"
-                  >
-                    الصفحة الأولى فقط
-                  </button>
-                </div>
-
-                <button
-                  id="run-split-btn"
-                  type="button"
-                  disabled
-                  class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-white bg-[#1565C0] hover:bg-[#0D47A1] disabled:bg-slate-300 disabled:text-slate-500 rounded-lg transition-colors duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#1565C0]"
-                >
-                  <span>تنفيذ التجزئة</span>
-                </button>
-              </div>
-
-              <!-- Panel 1: Convert PDF to PNG -->
-              <div id="tool-panel-png" class="hidden space-y-4">
-                <div>
-                  <h1 class="text-xl font-bold text-slate-900">تحويل PDF إلى صور PNG</h1>
-                  <p class="text-sm text-slate-600 mt-1">
-                    تصدير صفحات المستند إلى صور PNG عالية الوضوح مع إمكانية تنزيلها فردياً أو كملف ZIP.
-                  </p>
-                </div>
-
-                <div>
-                  <span class="block text-sm font-semibold text-slate-800 mb-2">دقة التصدير</span>
-                  <div class="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      data-png-scale="1"
-                      class="png-scale-btn py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap cursor-pointer"
-                    >
-                      1x قياسي
-                    </button>
-                    <button
-                      type="button"
-                      data-png-scale="2"
-                      class="png-scale-btn py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg border border-[#1565C0] bg-[#1565C0]/10 text-[#1565C0] transition-colors whitespace-nowrap cursor-pointer"
-                    >
-                      2x عالي
-                    </button>
-                    <button
-                      type="button"
-                      data-png-scale="3"
-                      class="png-scale-btn py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap cursor-pointer"
-                    >
-                      3x فائق
-                    </button>
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label for="png-from-input" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                      من الصفحة
-                    </label>
-                    <input
-                      id="png-from-input"
-                      type="text"
-                      inputmode="numeric"
-                      dir="ltr"
-                      value="1"
-                      class="w-full px-3.5 py-2 text-sm font-mono text-center bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/20"
-                    />
-                  </div>
-                  <div>
-                    <label for="png-to-input" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                      إلى الصفحة
-                    </label>
-                    <input
-                      id="png-to-input"
-                      type="text"
-                      inputmode="numeric"
-                      dir="ltr"
-                      value="1"
-                      class="w-full px-3.5 py-2 text-sm font-mono text-center bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/20"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  id="run-png-btn"
-                  type="button"
-                  disabled
-                  class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-white bg-[#1565C0] hover:bg-[#0D47A1] disabled:bg-slate-300 disabled:text-slate-500 rounded-lg transition-colors duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#1565C0]"
-                >
-                  <span id="run-png-label">تحويل إلى PNG بدقة 2x</span>
-                </button>
-              </div>
-
-              <!-- Panel 2: Arabic Watermark -->
-              <div id="tool-panel-watermark" class="hidden space-y-4">
-                <div>
-                  <h1 class="text-xl font-bold text-slate-900">إضافة نص أو علامة مائية عربية</h1>
-                  <p class="text-sm text-slate-600 mt-1">
-                    تضمين نص عربي مترابط بدقة عالية مع معاينة فورية قبل الحفظ.
-                  </p>
-                </div>
-
-                <div>
-                  <label for="watermark-text-input" class="block text-sm font-semibold text-slate-800 mb-1.5">
-                    النص المراد إضافته
-                  </label>
-                  <input
-                    id="watermark-text-input"
-                    type="text"
-                    value="موعد اللوز العبيدي"
-                    placeholder="موعد اللوز العبيدي"
-                    class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/20"
-                  />
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label for="wm-from-input" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                      من الصفحة
-                    </label>
-                    <input
-                      id="wm-from-input"
-                      type="text"
-                      inputmode="numeric"
-                      dir="ltr"
-                      value="1"
-                      class="w-full px-3.5 py-2 text-sm font-mono text-center bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/20"
-                    />
-                  </div>
-                  <div>
-                    <label for="wm-to-input" class="block text-xs font-semibold text-slate-700 mb-1.5">
-                      إلى الصفحة
-                    </label>
-                    <input
-                      id="wm-to-input"
-                      type="text"
-                      inputmode="numeric"
-                      dir="ltr"
-                      value="1"
-                      class="w-full px-3.5 py-2 text-sm font-mono text-center bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:border-[#1565C0] focus:ring-2 focus:ring-[#1565C0]/20"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <span class="block text-xs font-semibold text-slate-700 mb-1.5">موضع العلامة المائية</span>
-                  <div class="grid grid-cols-5 gap-1.5">
-                    <button type="button" data-wm-pos="diagonal" class="wm-pos-btn py-1.5 px-1 text-xs font-semibold rounded-md border border-[#1565C0] bg-[#1565C0]/10 text-[#1565C0] whitespace-nowrap cursor-pointer">قطري</button>
-                    <button type="button" data-wm-pos="tiled" class="wm-pos-btn py-1.5 px-1 text-xs font-semibold rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 whitespace-nowrap cursor-pointer">متكرر</button>
-                    <button type="button" data-wm-pos="center" class="wm-pos-btn py-1.5 px-1 text-xs font-semibold rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 whitespace-nowrap cursor-pointer">المنتصف</button>
-                    <button type="button" data-wm-pos="top" class="wm-pos-btn py-1.5 px-1 text-xs font-semibold rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 whitespace-nowrap cursor-pointer">ترويسة</button>
-                    <button type="button" data-wm-pos="bottom" class="wm-pos-btn py-1.5 px-1 text-xs font-semibold rounded-md border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 whitespace-nowrap cursor-pointer">تذييل</button>
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <div class="flex items-center justify-between text-xs mb-1">
-                      <label for="wm-opacity" class="font-semibold text-slate-700">الشفافية</label>
-                      <span id="wm-opacity-val" class="font-mono tabular-nums text-slate-600">25%</span>
-                    </div>
-                    <input id="wm-opacity" type="range" min="0.1" max="0.9" step="0.05" value="0.25" class="w-full accent-[#1565C0] cursor-pointer" />
-                  </div>
-                  <div>
-                    <div class="flex items-center justify-between text-xs mb-1">
-                      <label for="wm-size" class="font-semibold text-slate-700">حجم الخط</label>
-                      <span id="wm-size-val" class="font-mono tabular-nums text-slate-600">42 pt</span>
-                    </div>
-                    <input id="wm-size" type="range" min="18" max="72" step="2" value="42" class="w-full accent-[#1565C0] cursor-pointer" />
-                  </div>
-                </div>
-
-                <div class="flex items-center justify-between gap-3">
-                  <span class="text-xs font-semibold text-slate-700">لون النص</span>
-                  <div class="flex items-center gap-2">
-                    <button type="button" data-wm-color="#1565C0" aria-label="أزرق رسمي" title="أزرق رسمي" class="wm-color-btn w-7 h-7 rounded-full border-2 border-slate-900 scale-110 transition-transform cursor-pointer" style="background-color: #1565C0"></button>
-                    <button type="button" data-wm-color="#0F172A" aria-label="أسود داكن" title="أسود داكن" class="wm-color-btn w-7 h-7 rounded-full border-2 border-white ring-1 ring-slate-300 transition-transform cursor-pointer" style="background-color: #0F172A"></button>
-                    <button type="button" data-wm-color="#64748B" aria-label="رمادي هادئ" title="رمادي هادئ" class="wm-color-btn w-7 h-7 rounded-full border-2 border-white ring-1 ring-slate-300 transition-transform cursor-pointer" style="background-color: #64748B"></button>
-                    <button type="button" data-wm-color="#DC2626" aria-label="أحمر ختم" title="أحمر ختم" class="wm-color-btn w-7 h-7 rounded-full border-2 border-white ring-1 ring-slate-300 transition-transform cursor-pointer" style="background-color: #DC2626"></button>
-                    <button type="button" data-wm-color="#15803D" aria-label="أخضر اعتماد" title="أخضر اعتماد" class="wm-color-btn w-7 h-7 rounded-full border-2 border-white ring-1 ring-slate-300 transition-transform cursor-pointer" style="background-color: #15803D"></button>
-                  </div>
-                </div>
-
-                <button
-                  id="run-watermark-btn"
-                  type="button"
-                  disabled
-                  class="w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-white bg-[#1565C0] hover:bg-[#0D47A1] disabled:bg-slate-300 disabled:text-slate-500 rounded-lg transition-colors duration-150 whitespace-nowrap cursor-pointer disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#1565C0]"
-                >
-                  <span>إضافة النص إلى الملف</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Section 4: Accessible Status Feedback -->
-            <div id="status-banner" role="status" aria-live="polite" class="px-5 py-3.5 rounded-b-xl flex items-start gap-2.5 text-sm font-semibold bg-slate-50/70 text-slate-700">
-              <span id="status-icon" class="shrink-0 mt-0.5 text-[#1565C0]" aria-hidden="true">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 16v-4" />
-                  <path d="M12 8h.01" />
+    <!-- Main Responsive Workspace -->
+    <main id="workspace" class="main-container">
+      <div class="workspace-grid">
+        <!-- Controls Column -->
+        <div class="panel">
+          <!-- Active File Summary -->
+          <div class="panel-section">
+            <div class="doc-summary">
+              <div class="doc-icon-box" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                  <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                  <path d="M10 9H8" />
+                  <path d="M16 13H8" />
+                  <path d="M16 17H8" />
                 </svg>
-              </span>
-              <span id="status-text" class="leading-snug">مرحباً بك في موعد اللوز PDF PRO</span>
+              </div>
+              <div class="doc-meta-wrap">
+                <div class="doc-kicker">الملف النشط</div>
+                <div id="active-file-name" class="doc-filename" dir="auto">لم يتم اختيار ملف</div>
+                <div id="active-file-meta" class="doc-submeta tabular">
+                  اختر ملف PDF من جهازك أو جرّب الملف النموذجي
+                </div>
+              </div>
             </div>
+
+            <div class="doc-actions">
+              <button id="panel-pick-btn" type="button" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <span id="panel-pick-label">اختيار ملف PDF</span>
+              </button>
+              <button id="panel-sample-btn" type="button" class="btn btn-secondary">ملف نموذجي</button>
+            </div>
+
+            <div id="progress-wrapper" class="progress-box hidden" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+              <div class="progress-head">
+                <span>جارٍ المعالجة...</span>
+                <span id="progress-label" class="mono">0%</span>
+              </div>
+              <div class="progress-track">
+                <div id="progress-bar" class="progress-fill"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Segmented Tool Switcher -->
+          <div class="panel-section panel-section-tinted">
+            <div class="segmented" role="tablist" aria-label="اختيار الأداة">
+              <button type="button" role="tab" aria-selected="true" class="seg-btn active" data-seg-tab="split">تجزئة</button>
+              <button type="button" role="tab" aria-selected="false" class="seg-btn" data-seg-tab="png">صور PNG</button>
+              <button type="button" role="tab" aria-selected="false" class="seg-btn" data-seg-tab="watermark">علامة مائية</button>
+            </div>
+          </div>
+
+          <!-- Tool Forms -->
+          <div class="panel-section">
+            <!-- Tool 1: Split PDF -->
+            <div id="tool-panel-split" class="tool-form">
+              <div>
+                <h1 class="tool-title">تجزئة ملف PDF</h1>
+                <p class="tool-desc">أدخل نطاقات الصفحات مفصولة بفاصلة لإنشاء ملف PDF مستقل لكل نطاق.</p>
+              </div>
+
+              <div>
+                <label for="split-ranges-input" class="field-label">نطاقات الصفحات</label>
+                <input
+                  id="split-ranges-input"
+                  type="text"
+                  class="text-input mono ltr"
+                  value="1-3,4-6"
+                  placeholder="1-3,4-6,7-10"
+                />
+                <p id="split-ranges-feedback" class="field-hint tabular hidden"></p>
+              </div>
+
+              <div id="split-presets" class="preset-row hidden">
+                <button id="preset-half-btn" type="button" class="btn btn-subtle">تقسيم إلى نصفين</button>
+                <button id="preset-every-btn" type="button" class="btn btn-subtle">كل صفحة في ملف</button>
+                <button id="preset-first-btn" type="button" class="btn btn-subtle">الصفحة الأولى فقط</button>
+              </div>
+
+              <button id="run-split-btn" type="button" class="btn btn-primary btn-full" disabled>تنفيذ التجزئة</button>
+            </div>
+
+            <!-- Tool 2: Convert PDF to PNG -->
+            <div id="tool-panel-png" class="tool-form hidden">
+              <div>
+                <h1 class="tool-title">تحويل PDF إلى صور PNG</h1>
+                <p class="tool-desc">تصدير صفحات المستند إلى صور PNG عالية الوضوح مع إمكانية تنزيلها فردياً أو كملف ZIP.</p>
+              </div>
+
+              <div>
+                <span class="field-label">دقة التصدير</span>
+                <div class="option-grid-3">
+                  <button type="button" class="choice-btn" data-png-scale="1">1x قياسي</button>
+                  <button type="button" class="choice-btn active" data-png-scale="2">2x عالي</button>
+                  <button type="button" class="choice-btn" data-png-scale="3">3x فائق</button>
+                </div>
+              </div>
+
+              <div class="two-col-fields">
+                <div>
+                  <label for="png-from-input" class="field-label">من الصفحة</label>
+                  <input id="png-from-input" type="text" inputmode="numeric" class="text-input mono centered" value="1" />
+                </div>
+                <div>
+                  <label for="png-to-input" class="field-label">إلى الصفحة</label>
+                  <input id="png-to-input" type="text" inputmode="numeric" class="text-input mono centered" value="1" />
+                </div>
+              </div>
+
+              <button id="run-png-btn" type="button" class="btn btn-primary btn-full" disabled>
+                <span id="run-png-label">تحويل إلى PNG بدقة 2x</span>
+              </button>
+            </div>
+
+            <!-- Tool 3: Arabic Watermark -->
+            <div id="tool-panel-watermark" class="tool-form hidden">
+              <div>
+                <h1 class="tool-title">إضافة نص أو علامة مائية عربية</h1>
+                <p class="tool-desc">تضمين نص عربي مترابط بدقة عالية مع معاينة فورية قبل الحفظ.</p>
+              </div>
+
+              <div>
+                <label for="watermark-text-input" class="field-label">النص المراد إضافته</label>
+                <input
+                  id="watermark-text-input"
+                  type="text"
+                  class="text-input"
+                  value="موعد اللوز العبيدي"
+                  placeholder="موعد اللوز العبيدي"
+                />
+              </div>
+
+              <div class="two-col-fields">
+                <div>
+                  <label for="wm-from-input" class="field-label">من الصفحة</label>
+                  <input id="wm-from-input" type="text" inputmode="numeric" class="text-input mono centered" value="1" />
+                </div>
+                <div>
+                  <label for="wm-to-input" class="field-label">إلى الصفحة</label>
+                  <input id="wm-to-input" type="text" inputmode="numeric" class="text-input mono centered" value="1" />
+                </div>
+              </div>
+
+              <div>
+                <span class="field-label">موضع العلامة المائية</span>
+                <div class="option-grid-5">
+                  <button type="button" class="choice-btn active" data-wm-pos="diagonal">قطري</button>
+                  <button type="button" class="choice-btn" data-wm-pos="tiled">متكرر</button>
+                  <button type="button" class="choice-btn" data-wm-pos="center">المنتصف</button>
+                  <button type="button" class="choice-btn" data-wm-pos="top">ترويسة</button>
+                  <button type="button" class="choice-btn" data-wm-pos="bottom">تذييل</button>
+                </div>
+              </div>
+
+              <div class="two-col-fields">
+                <div>
+                  <div class="range-head">
+                    <label for="wm-opacity" style="font-weight: 600">الشفافية</label>
+                    <span id="wm-opacity-val" class="mono">25%</span>
+                  </div>
+                  <input id="wm-opacity" type="range" min="0.1" max="0.9" step="0.05" value="0.25" class="range-input" />
+                </div>
+                <div>
+                  <div class="range-head">
+                    <label for="wm-size" style="font-weight: 600">حجم الخط</label>
+                    <span id="wm-size-val" class="mono">42 pt</span>
+                  </div>
+                  <input id="wm-size" type="range" min="18" max="72" step="2" value="42" class="range-input" />
+                </div>
+              </div>
+
+              <div class="color-row">
+                <span class="field-label" style="margin-bottom: 0">لون النص</span>
+                <div class="swatch-group">
+                  <button type="button" class="color-swatch active" data-wm-color="#1565C0" aria-label="أزرق رسمي" title="أزرق رسمي" style="background: #1565c0"></button>
+                  <button type="button" class="color-swatch" data-wm-color="#0F172A" aria-label="أسود داكن" title="أسود داكن" style="background: #0f172a"></button>
+                  <button type="button" class="color-swatch" data-wm-color="#64748B" aria-label="رمادي هادئ" title="رمادي هادئ" style="background: #64748b"></button>
+                  <button type="button" class="color-swatch" data-wm-color="#DC2626" aria-label="أحمر ختم" title="أحمر ختم" style="background: #dc2626"></button>
+                  <button type="button" class="color-swatch" data-wm-color="#15803D" aria-label="أخضر اعتماد" title="أخضر اعتماد" style="background: #15803d"></button>
+                </div>
+              </div>
+
+              <button id="run-watermark-btn" type="button" class="btn btn-primary btn-full" disabled>إضافة النص إلى الملف</button>
+            </div>
+          </div>
+
+          <!-- Accessible Status Feedback -->
+          <div id="status-banner" class="status-banner" role="status" aria-live="polite">
+            <span id="status-icon" class="status-icon" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1565C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4" />
+                <path d="M12 8h.01" />
+              </svg>
+            </span>
+            <span id="status-text">مرحباً بك في موعد اللوز PDF PRO</span>
           </div>
         </div>
 
-        <!-- Live Document Preview Stage (7 cols) -->
-        <div class="lg:col-span-7">
-          <section
-            id="preview-dropzone"
-            aria-label="معاينة المستند"
-            class="bg-white border border-slate-200 rounded-xl flex flex-col min-h-[540px] lg:min-h-[680px] transition-colors duration-150"
-          >
-            <!-- Stage Toolbar -->
-            <div class="px-5 py-3.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
-              <div class="min-w-0">
-                <h2 id="stage-title" class="text-sm font-bold text-slate-900 truncate">منطقة معاينة المستند</h2>
-                <p id="stage-subtitle" class="hidden text-xs text-slate-500 mt-0.5 tabular-nums"></p>
-              </div>
+        <!-- Live Preview Stage Column -->
+        <section id="preview-dropzone" class="panel stage-panel" aria-label="معاينة المستند">
+          <div class="stage-header">
+            <div class="stage-header-info">
+              <h2 id="stage-title" class="stage-title">منطقة معاينة المستند</h2>
+              <p id="stage-subtitle" class="stage-subtitle tabular hidden"></p>
+            </div>
 
-              <div id="page-nav-controls" class="hidden flex items-center gap-2 shrink-0">
-                <button
-                  id="prev-page-btn"
-                  type="button"
-                  aria-label="الصفحة السابقة"
-                  class="w-9 h-9 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 transition-colors cursor-pointer"
-                >
-                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="m9 18 6-6-6-6" />
-                  </svg>
-                </button>
-                <span id="page-counter" class="font-mono text-xs font-medium text-slate-700 tabular-nums px-2 whitespace-nowrap">1 / 1</span>
-                <button
-                  id="next-page-btn"
-                  type="button"
-                  aria-label="الصفحة التالية"
-                  class="w-9 h-9 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 transition-colors cursor-pointer"
-                >
-                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="m15 18-6-6 6-6" />
-                  </svg>
-                </button>
+            <div id="page-nav-controls" class="page-nav hidden">
+              <button id="prev-page-btn" type="button" class="btn btn-icon" aria-label="الصفحة السابقة">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </button>
+              <span id="page-counter" class="page-counter mono">1 / 1</span>
+              <button id="next-page-btn" type="button" class="btn btn-icon" aria-label="الصفحة التالية">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div id="stage-container" class="stage-viewport">
+            <div id="stage-empty-state" class="empty-dropzone">
+              <div class="empty-icon-box" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                  <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                  <path d="M12 12v6" />
+                  <path d="m15 15-3-3-3 3" />
+                </svg>
+              </div>
+              <h3 class="empty-title">اسحب ملف PDF وأفلته هنا للبدء</h3>
+              <p class="empty-desc">
+                تتم معالجة جميع الملفات محلياً داخل متصفحك بسرعة وأمان دون رفع مستنداتك إلى أي خادم خارجي.
+              </p>
+              <div class="empty-cta-row">
+                <button id="stage-pick-btn" type="button" class="btn btn-primary">اختيار ملف PDF</button>
+                <button id="stage-sample-btn" type="button" class="btn btn-secondary">تجربة بملف نموذجي (6 صفحات)</button>
               </div>
             </div>
 
-            <!-- Stage Viewport -->
-            <div id="stage-container" class="flex-1 bg-[#F8FAFC] p-5 sm:p-6 flex flex-col items-center justify-center relative overflow-hidden rounded-b-xl">
-              <!-- Empty Dropzone State -->
-              <div id="stage-empty-state" class="max-w-md w-full text-center py-8 px-4">
-                <div class="w-14 h-14 mx-auto rounded-xl bg-white border border-slate-200 flex items-center justify-center text-[#1565C0] mb-5">
-                  <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-                    <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-                    <path d="M12 12v6" />
-                    <path d="m15 15-3-3-3 3" />
-                  </svg>
-                </div>
-                <h3 class="text-lg font-bold text-slate-900 mb-2">اسحب ملف PDF وأفلته هنا للبدء</h3>
-                <p class="text-sm text-slate-600 leading-relaxed mb-6">
-                  تتم معالجة جميع الملفات محلياً داخل متصفحك بسرعة وأمان دون رفع مستنداتك إلى أي خادم خارجي.
-                </p>
-                <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <button
-                    id="stage-pick-btn"
-                    type="button"
-                    class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-[#1565C0] hover:bg-[#0D47A1] rounded-lg transition-colors duration-150 whitespace-nowrap cursor-pointer"
-                  >
-                    <span>اختيار ملف PDF</span>
-                  </button>
-                  <button
-                    id="stage-sample-btn"
-                    type="button"
-                    class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg transition-colors duration-150 whitespace-nowrap cursor-pointer"
-                  >
-                    <span>تجربة بملف نموذجي (6 صفحات)</span>
-                  </button>
-                </div>
+            <div id="stage-canvas-view" class="canvas-stage-wrap hidden">
+              <div class="paper-frame">
+                <canvas id="pdf-preview-canvas"></canvas>
+                <div id="live-watermark-overlay" class="wm-live-overlay hidden" aria-hidden="true"></div>
+                <div id="canvas-loading-overlay" class="canvas-loading hidden">جارٍ عرض الصفحة...</div>
               </div>
 
-              <!-- Active Rendered PDF Page -->
-              <div id="stage-canvas-view" class="hidden w-full flex flex-col items-center gap-5">
-                <div class="relative bg-white border border-slate-200 shadow-sm overflow-hidden max-w-full">
-                  <canvas id="pdf-preview-canvas" class="block max-w-full h-auto"></canvas>
-                  <div
-                    id="live-watermark-overlay"
-                    aria-hidden="true"
-                    class="hidden pointer-events-none absolute inset-0 overflow-hidden select-none"
-                  ></div>
-                  <div id="canvas-loading-overlay" class="hidden absolute inset-0 bg-white/75 flex items-center justify-center">
-                    <span class="text-sm font-medium text-slate-700">جارٍ عرض الصفحة...</span>
-                  </div>
+              <div id="quick-pages-wrapper" class="quick-pages hidden">
+                <div class="quick-pages-head">
+                  <span>انتقال سريع بين الصفحات</span>
+                  <span id="page-dims-label" class="mono"></span>
                 </div>
-
-                <!-- Quick Page Strip -->
-                <div id="quick-pages-wrapper" class="hidden w-full max-w-[680px]">
-                  <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
-                    <span>انتقال سريع بين الصفحات</span>
-                    <span id="page-dims-label" class="font-mono tabular-nums"></span>
-                  </div>
-                  <div id="quick-pages-buttons" class="flex flex-wrap items-center gap-1.5"></div>
-                </div>
+                <div id="quick-pages-buttons" class="quick-pages-grid"></div>
               </div>
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </div>
 
-      <!-- Outputs Panel -->
-      <section id="outputs-section" aria-label="الملفات الناتجة" class="bg-white border border-slate-200 rounded-xl">
-        <div class="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+      <!-- Outputs Section -->
+      <section id="outputs-section" class="panel" aria-label="الملفات الناتجة">
+        <div class="outputs-header">
           <div>
-            <h2 class="text-base font-bold text-slate-900">الملفات الناتجة</h2>
-            <p id="outputs-subtitle" class="text-xs text-slate-500 mt-0.5 tabular-nums">
+            <h2 class="outputs-title">الملفات الناتجة</h2>
+            <p id="outputs-subtitle" class="outputs-sub tabular">
               ستظهر هنا الملفات بعد تنفيذ التجزئة أو التحويل أو إضافة العلامة المائية
             </p>
           </div>
-          <div id="outputs-bulk-actions" class="hidden flex items-center gap-2">
-            <button
-              id="download-zip-btn"
-              type="button"
-              class="hidden inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#1565C0] hover:bg-[#0D47A1] disabled:opacity-50 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
-            >
-              <span>تنزيل الكل (ZIP)</span>
+          <div id="outputs-bulk-actions" class="outputs-bulk hidden">
+            <button id="download-zip-btn" type="button" class="btn btn-primary hidden" style="min-height: 34px; padding: 6px 14px; font-size: 12px">
+              تنزيل الكل (ZIP)
             </button>
-            <button
-              id="clear-outputs-btn"
-              type="button"
-              class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors whitespace-nowrap cursor-pointer"
-            >
-              <span>مسح القائمة</span>
-            </button>
+            <button id="clear-outputs-btn" type="button" class="btn btn-ghost btn-ghost-danger">مسح القائمة</button>
           </div>
         </div>
 
-        <div id="outputs-empty" class="px-5 py-10 text-center text-sm text-slate-500">
-          لم يتم إنشاء أي ملفات ناتجة في هذه الجلسة بعد.
-        </div>
-        <ul id="outputs-list" class="hidden divide-y divide-slate-200"></ul>
+        <div id="outputs-empty" class="outputs-empty">لم يتم إنشاء أي ملفات ناتجة في هذه الجلسة بعد.</div>
+        <ul id="outputs-list" class="outputs-list hidden"></ul>
       </section>
     </main>
 
-    <!-- Quiet Footer with Standalone Single-File HTML Download -->
-    <footer class="hidden md:block border-t border-slate-200 bg-white mt-auto">
-      <div class="max-w-[1360px] mx-auto px-6 lg:px-8 py-4 flex items-center justify-between gap-4 text-xs text-slate-500">
-        <span>موعد اللوز PDF PRO · معالجة محلية كاملة داخل المتصفح</span>
-        <a
-          href="/mued-pdf-pro.html"
-          download="mued-pdf-pro.html"
-          class="font-semibold text-[#1565C0] hover:underline whitespace-nowrap"
-        >
-          تنزيل نسخة HTML مستقلة (ملف واحد)
-        </a>
+    <!-- Desktop Footer -->
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <span>موعد اللوز PDF PRO</span>
+        <span>معالجة محلية كاملة داخل المتصفح للحفاظ على خصوصية مستنداتك</span>
       </div>
     </footer>
 
     <!-- Mobile Bottom Navigation -->
-    <nav aria-label="شريط التنقل السفلي" class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 h-14 px-2 grid grid-cols-3">
-      <button type="button" data-mobile-tab="split" class="mobile-tab-btn flex flex-col items-center justify-center gap-0.5 text-xs font-semibold text-[#1565C0] cursor-pointer">
+    <nav class="mobile-bottom-nav" aria-label="شريط التنقل السفلي">
+      <button type="button" class="mobile-nav-btn active" data-mobile-tab="split">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="6" cy="6" r="3" />
+          <circle cx="6" cy="18" r="3" />
+          <line x1="20" y1="4" x2="8.12" y2="15.88" />
+          <line x1="14.47" y1="14.48" x2="20" y2="20" />
+          <line x1="8.12" y1="8.12" x2="12" y2="12" />
+        </svg>
         <span>تجزئة</span>
       </button>
-      <button type="button" data-mobile-tab="png" class="mobile-tab-btn flex flex-col items-center justify-center gap-0.5 text-xs font-medium text-slate-600 cursor-pointer">
+      <button type="button" class="mobile-nav-btn" data-mobile-tab="png">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+          <circle cx="9" cy="9" r="2" />
+          <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+        </svg>
         <span>صور PNG</span>
       </button>
-      <button type="button" data-mobile-tab="watermark" class="mobile-tab-btn flex flex-col items-center justify-center gap-0.5 text-xs font-medium text-slate-600 cursor-pointer">
+      <button type="button" class="mobile-nav-btn" data-mobile-tab="watermark">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 20h9" />
+          <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+        </svg>
         <span>علامة مائية</span>
       </button>
     </nav>
 
     <!-- PNG Lightbox Preview Modal -->
-    <div id="png-modal" role="dialog" aria-modal="true" aria-label="معاينة الصورة" class="hidden fixed inset-0 z-50 bg-slate-950/75 p-4 sm:p-8 flex items-center justify-center">
-      <div id="png-modal-card" class="bg-white rounded-xl border border-slate-200 max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
-        <div class="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between gap-4">
-          <span id="png-modal-title" class="text-sm font-semibold text-slate-900 truncate" dir="auto"></span>
-          <div class="flex items-center gap-2 shrink-0">
-            <button id="png-modal-download" type="button" class="px-3 py-1.5 text-xs font-semibold text-white bg-[#1565C0] hover:bg-[#0D47A1] rounded-lg transition-colors cursor-pointer">
-              تنزيل PNG
-            </button>
-            <button id="png-modal-close" type="button" aria-label="إغلاق المعاينة" class="px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer">
-              إغلاق
-            </button>
+    <div id="png-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-label="معاينة الصورة">
+      <div id="png-modal-card" class="modal-card">
+        <div class="modal-head">
+          <span id="png-modal-title" class="modal-title" dir="auto"></span>
+          <div style="display: flex; gap: 8px; flex-shrink: 0">
+            <button id="png-modal-download" type="button" class="btn btn-primary" style="min-height: 34px; padding: 6px 12px; font-size: 12px">تنزيل PNG</button>
+            <button id="png-modal-close" type="button" class="btn btn-ghost">إغلاق</button>
           </div>
         </div>
-        <div class="flex-1 overflow-auto bg-slate-100 p-4 flex items-center justify-center">
-          <img id="png-modal-img" alt="" referrerpolicy="no-referrer" class="max-w-full max-h-[75vh] object-contain border border-slate-200 bg-white" />
+        <div class="modal-body">
+          <img id="png-modal-img" alt="" referrerpolicy="no-referrer" />
         </div>
       </div>
     </div>
 
-    <script type="module" src="/src/main.ts"></script>
+    <script>
+      (function () {
+        "use strict";
+
+        if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+            "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+        }
+
+        const ARABIC_DIGITS = {
+          "٠": "0",
+          "١": "1",
+          "٢": "2",
+          "٣": "3",
+          "٤": "4",
+          "٥": "5",
+          "٦": "6",
+          "٧": "7",
+          "٨": "8",
+          "٩": "9",
+          "،": ",",
+          "ـ": "-",
+          "–": "-",
+          "—": "-",
+        };
+
+        const state = {
+          activeTab: "split",
+          pdfBytes: null,
+          fileName: "لم يتم اختيار ملف",
+          fileSize: 0,
+          totalPages: 0,
+          currentPage: 1,
+          pageDimsPt: null,
+          canvasCssWidth: 0,
+          isBusy: false,
+          progress: 0,
+          ranges: "1-3,4-6",
+          pngScale: 2,
+          pngPageFrom: "1",
+          pngPageTo: "1",
+          watermark: {
+            text: "موعد اللوز العبيدي",
+            pageFrom: "1",
+            pageTo: "1",
+            position: "diagonal",
+            opacity: 0.25,
+            fontSize: 42,
+            color: "#1565C0",
+          },
+          outputs: [],
+          modalFile: null,
+        };
+
+        const $ = (id) => document.getElementById(id);
+
+        const dom = {
+          fileInput: $("pdf-file-input"),
+          headerPickBtn: $("header-pick-btn"),
+          navOutputsBtn: $("nav-outputs-btn"),
+          panelPickBtn: $("panel-pick-btn"),
+          panelPickLabel: $("panel-pick-label"),
+          panelSampleBtn: $("panel-sample-btn"),
+          activeFileName: $("active-file-name"),
+          activeFileMeta: $("active-file-meta"),
+          progressWrapper: $("progress-wrapper"),
+          progressLabel: $("progress-label"),
+          progressBar: $("progress-bar"),
+
+          panelSplit: $("tool-panel-split"),
+          panelPng: $("tool-panel-png"),
+          panelWatermark: $("tool-panel-watermark"),
+
+          splitRangesInput: $("split-ranges-input"),
+          splitRangesFeedback: $("split-ranges-feedback"),
+          splitPresets: $("split-presets"),
+          presetHalfBtn: $("preset-half-btn"),
+          presetEveryBtn: $("preset-every-btn"),
+          presetFirstBtn: $("preset-first-btn"),
+          runSplitBtn: $("run-split-btn"),
+
+          pngFromInput: $("png-from-input"),
+          pngToInput: $("png-to-input"),
+          runPngBtn: $("run-png-btn"),
+          runPngLabel: $("run-png-label"),
+
+          wmTextInput: $("watermark-text-input"),
+          wmFromInput: $("wm-from-input"),
+          wmToInput: $("wm-to-input"),
+          wmOpacity: $("wm-opacity"),
+          wmOpacityVal: $("wm-opacity-val"),
+          wmSize: $("wm-size"),
+          wmSizeVal: $("wm-size-val"),
+          runWatermarkBtn: $("run-watermark-btn"),
+
+          statusBanner: $("status-banner"),
+          statusIcon: $("status-icon"),
+          statusText: $("status-text"),
+
+          previewDropzone: $("preview-dropzone"),
+          stageTitle: $("stage-title"),
+          stageSubtitle: $("stage-subtitle"),
+          pageNavControls: $("page-nav-controls"),
+          prevPageBtn: $("prev-page-btn"),
+          nextPageBtn: $("next-page-btn"),
+          pageCounter: $("page-counter"),
+          stageContainer: $("stage-container"),
+          stageEmptyState: $("stage-empty-state"),
+          stagePickBtn: $("stage-pick-btn"),
+          stageSampleBtn: $("stage-sample-btn"),
+          stageCanvasView: $("stage-canvas-view"),
+          previewCanvas: $("pdf-preview-canvas"),
+          liveWatermarkOverlay: $("live-watermark-overlay"),
+          canvasLoadingOverlay: $("canvas-loading-overlay"),
+          quickPagesWrapper: $("quick-pages-wrapper"),
+          pageDimsLabel: $("page-dims-label"),
+          quickPagesButtons: $("quick-pages-buttons"),
+
+          outputsSection: $("outputs-section"),
+          outputsSubtitle: $("outputs-subtitle"),
+          outputsBulkActions: $("outputs-bulk-actions"),
+          downloadZipBtn: $("download-zip-btn"),
+          clearOutputsBtn: $("clear-outputs-btn"),
+          outputsEmpty: $("outputs-empty"),
+          outputsList: $("outputs-list"),
+
+          pngModal: $("png-modal"),
+          pngModalCard: $("png-modal-card"),
+          pngModalTitle: $("png-modal-title"),
+          pngModalImg: $("png-modal-img"),
+          pngModalDownload: $("png-modal-download"),
+          pngModalClose: $("png-modal-close"),
+        };
+
+        let renderSeq = 0;
+
+        function ensureLibrariesLoaded() {
+          if (!window.PDFLib || !window.pdfjsLib || !window.JSZip) {
+            throw new Error("تعذر تحميل مكتبات PDF، يرجى التحقق من الاتصال بالإنترنت وإعادة المحاولة.");
+          }
+        }
+
+        function normalizeDigits(str) {
+          return String(str || "").replace(/[٠-٩،ـ–—]/g, (ch) => ARABIC_DIGITS[ch] || ch);
+        }
+
+        function formatFileSize(bytes) {
+          if (bytes < 1024) return bytes + " بايت";
+          const kb = bytes / 1024;
+          if (kb < 1024) return kb.toFixed(1) + " ك.ب";
+          return (kb / 1024).toFixed(2) + " م.ب";
+        }
+
+        function stripPdfExt(name) {
+          return String(name || "").replace(/\.pdf$/i, "").trim() || "document";
+        }
+
+        function parsePageRanges(raw, total) {
+          if (total <= 0) throw new Error("لم يتم تحميل ملف PDF صالح بعد");
+          const normalized = normalizeDigits(raw).trim();
+          if (!normalized) throw new Error("يرجى إدخال نطاق صفحات صالح مثل 1-3,4-6");
+
+          const tokens = normalized
+            .split(",")
+            .map((p) => p.trim())
+            .filter(Boolean);
+          if (!tokens.length) throw new Error("يرجى إدخال نطاق صفحات صالح");
+
+          const results = [];
+          for (const token of tokens) {
+            if (token.includes("-")) {
+              const parts = token.split("-").map((s) => s.trim());
+              if (parts.length !== 2) throw new Error('صيغة نطاق غير صالحة: "' + token + '"');
+              const start = parseInt(parts[0], 10);
+              const end = parseInt(parts[1], 10);
+              if (isNaN(start) || isNaN(end)) throw new Error('أرقام غير صالحة في النطاق: "' + token + '"');
+              if (start < 1 || end < 1 || start > total || end > total) {
+                throw new Error('النطاق "' + token + '" خارج حدود الصفحات (1 إلى ' + total + ")");
+              }
+              if (start > end) throw new Error('بداية النطاق أكبر من نهايته في "' + token + '"');
+              const pages = [];
+              for (let p = start; p <= end; p++) pages.push(p);
+              results.push({ start, end, label: start + "-" + end, pages });
+            } else {
+              const page = parseInt(token, 10);
+              if (isNaN(page)) throw new Error('رقم صفحة غير صالح: "' + token + '"');
+              if (page < 1 || page > total) {
+                throw new Error("الصفحة " + page + " خارج حدود الملف (1 إلى " + total + ")");
+              }
+              results.push({ start: page, end: page, label: String(page), pages: [page] });
+            }
+          }
+          return results;
+        }
+
+        function getParsedRangesSafe() {
+          if (!state.pdfBytes || state.totalPages <= 0) return { parsed: [], error: null };
+          try {
+            return { parsed: parsePageRanges(state.ranges, state.totalPages), error: null };
+          } catch (err) {
+            return { parsed: [], error: err.message || "صيغة نطاق غير صالحة" };
+          }
+        }
+
+        function setStatus(kind, text) {
+          dom.statusText.textContent = text;
+          dom.statusBanner.className =
+            "status-banner" + (kind === "success" ? " success" : kind === "error" ? " error" : "");
+
+          if (kind === "error") {
+            dom.statusIcon.innerHTML =
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+          } else if (kind === "success") {
+            dom.statusIcon.innerHTML =
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+          } else {
+            dom.statusIcon.innerHTML =
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1565C0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
+          }
+        }
+
+        function setBusy(busy, pct) {
+          state.isBusy = busy;
+          state.progress = pct || 0;
+          dom.progressWrapper.classList.toggle("hidden", !busy);
+          updateProgress(state.progress);
+          syncActionButtons();
+        }
+
+        function updateProgress(pct) {
+          state.progress = pct;
+          dom.progressWrapper.setAttribute("aria-valuenow", String(pct));
+          dom.progressLabel.textContent = pct + "%";
+          dom.progressBar.style.width = Math.max(8, pct) + "%";
+        }
+
+        function syncActionButtons() {
+          const hasFile = Boolean(state.pdfBytes);
+          const { error } = getParsedRangesSafe();
+          dom.headerPickBtn.disabled = state.isBusy;
+          dom.panelPickBtn.disabled = state.isBusy;
+          dom.panelSampleBtn.disabled = state.isBusy;
+          dom.stagePickBtn.disabled = state.isBusy;
+          dom.stageSampleBtn.disabled = state.isBusy;
+
+          dom.runSplitBtn.disabled = state.isBusy || !hasFile || Boolean(error);
+          dom.runPngBtn.disabled = state.isBusy || !hasFile;
+          dom.runWatermarkBtn.disabled = state.isBusy || !hasFile || !state.watermark.text.trim();
+        }
+
+        function syncSplitFeedback() {
+          const hasFile = Boolean(state.pdfBytes);
+          dom.splitPresets.classList.toggle("hidden", !hasFile);
+          if (!hasFile) {
+            dom.splitRangesFeedback.classList.add("hidden");
+            syncActionButtons();
+            return;
+          }
+          const { parsed, error } = getParsedRangesSafe();
+          dom.splitRangesFeedback.classList.remove("hidden");
+          if (error) {
+            dom.splitRangesFeedback.className = "field-hint tabular error";
+            dom.splitRangesFeedback.textContent = error;
+          } else {
+            dom.splitRangesFeedback.className = "field-hint tabular";
+            const word = parsed.length === 1 ? "ملف PDF" : "ملفات PDF";
+            dom.splitRangesFeedback.textContent =
+              "سيتم إنشاء " +
+              parsed.length +
+              " " +
+              word +
+              ": " +
+              parsed.map((r) => "[" + r.label + "]").join(" · ");
+          }
+          syncActionButtons();
+        }
+
+        function isWatermarkOnCurrentPage() {
+          if (state.activeTab !== "watermark" || !state.watermark.text.trim()) return false;
+          const from = parseInt(normalizeDigits(state.watermark.pageFrom), 10);
+          const to = parseInt(normalizeDigits(state.watermark.pageTo), 10);
+          if (isNaN(from) || isNaN(to)) return true;
+          return state.currentPage >= from && state.currentPage <= to;
+        }
+
+        function syncStageSubtitle() {
+          if (!state.pdfBytes) {
+            dom.stageTitle.textContent = "منطقة معاينة المستند";
+            dom.stageSubtitle.classList.add("hidden");
+            return;
+          }
+          dom.stageTitle.textContent = "معاينة: " + state.fileName;
+          dom.stageSubtitle.classList.remove("hidden");
+
+          if (state.activeTab === "split") {
+            const { parsed } = getParsedRangesSafe();
+            const groups = parsed
+              .map((r, i) => Object.assign({ part: i + 1 }, r))
+              .filter((r) => state.currentPage >= r.start && state.currentPage <= r.end);
+            dom.stageSubtitle.textContent = groups.length
+              ? "مشمولة في التجزئة: " + groups.map((g) => "الجزء " + g.part + " (" + g.label + ")").join("، ")
+              : "هذه الصفحة غير مشمولة في النطاقات المحددة حالياً";
+          } else if (state.activeTab === "png") {
+            if (state.pageDimsPt) {
+              const w = Math.round(state.pageDimsPt.width * state.pngScale);
+              const h = Math.round(state.pageDimsPt.height * state.pngScale);
+              dom.stageSubtitle.textContent =
+                "دقة التصدير المتوقعة: " + w + " × " + h + " بكسل (" + state.pngScale + "x)";
+            } else {
+              dom.stageSubtitle.textContent = "دقة التصدير المختارة: " + state.pngScale + "x";
+            }
+          } else {
+            dom.stageSubtitle.textContent = isWatermarkOnCurrentPage()
+              ? "معاينة فورية للعلامة المائية العربية على هذه الصفحة"
+              : "هذه الصفحة خارج نطاق تطبيق العلامة المائية المحدد";
+          }
+        }
+
+        function syncLiveWatermarkOverlay() {
+          const overlay = dom.liveWatermarkOverlay;
+          if (!state.pdfBytes || !isWatermarkOnCurrentPage() || state.canvasCssWidth <= 0) {
+            overlay.classList.add("hidden");
+            overlay.innerHTML = "";
+            return;
+          }
+
+          const ratio =
+            state.pageDimsPt && state.pageDimsPt.width > 0
+              ? state.canvasCssWidth / state.pageDimsPt.width
+              : 1;
+          const fontPx = Math.max(10, Math.round(state.watermark.fontSize * ratio));
+
+          overlay.classList.remove("hidden");
+          overlay.style.color = state.watermark.color;
+          overlay.style.opacity = String(state.watermark.opacity);
+          overlay.style.fontFamily = '"Cairo", "IBM Plex Sans Arabic", sans-serif';
+          overlay.style.fontWeight = "700";
+          overlay.style.fontSize = fontPx + "px";
+          overlay.style.lineHeight = "1.35";
+          overlay.innerHTML = "";
+
+          const text = state.watermark.text;
+          const pos = state.watermark.position;
+
+          if (pos === "tiled") {
+            const grid = document.createElement("div");
+            grid.className = "wm-overlay-tiled";
+            for (let i = 0; i < 12; i++) {
+              const sp = document.createElement("span");
+              sp.style.whiteSpace = "nowrap";
+              sp.textContent = text;
+              grid.appendChild(sp);
+            }
+            overlay.appendChild(grid);
+          } else {
+            const box = document.createElement("div");
+            box.className =
+              "wm-overlay-flex" +
+              (pos === "top" ? " wm-overlay-top" : pos === "bottom" ? " wm-overlay-bottom" : "");
+            const inner = document.createElement("div");
+            inner.style.whiteSpace = "pre-line";
+            if (pos === "diagonal") inner.style.transform = "rotate(-35deg)";
+            inner.textContent = text;
+            box.appendChild(inner);
+            overlay.appendChild(box);
+          }
+        }
+
+        function renderQuickPageStrip() {
+          if (!state.pdfBytes || state.totalPages <= 1) {
+            dom.quickPagesWrapper.classList.add("hidden");
+            return;
+          }
+          dom.quickPagesWrapper.classList.remove("hidden");
+          dom.pageDimsLabel.textContent = state.pageDimsPt
+            ? state.pageDimsPt.width + " × " + state.pageDimsPt.height + " pt"
+            : "";
+
+          const { parsed } = getParsedRangesSafe();
+          dom.quickPagesButtons.innerHTML = "";
+          const limit = Math.min(state.totalPages, 24);
+
+          for (let p = 1; p <= limit; p++) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.textContent = String(p);
+            const isSelected = p === state.currentPage;
+            const inSplit =
+              state.activeTab === "split" && parsed.some((r) => p >= r.start && p <= r.end);
+            btn.className =
+              "page-chip-btn" + (isSelected ? " active" : inSplit ? " in-split" : "");
+            btn.addEventListener("click", () => {
+              state.currentPage = p;
+              renderCurrentPreviewPage();
+            });
+            dom.quickPagesButtons.appendChild(btn);
+          }
+
+          if (state.totalPages > 24) {
+            const more = document.createElement("span");
+            more.className = "field-hint tabular";
+            more.style.margin = "4px 6px 0";
+            more.textContent = "+ " + (state.totalPages - 24) + " صفحة أخرى";
+            dom.quickPagesButtons.appendChild(more);
+          }
+        }
+
+        async function renderCurrentPreviewPage() {
+          if (!state.pdfBytes || state.totalPages <= 0) {
+            dom.stageEmptyState.classList.remove("hidden");
+            dom.stageCanvasView.classList.add("hidden");
+            dom.pageNavControls.classList.add("hidden");
+            syncStageSubtitle();
+            return;
+          }
+
+          dom.stageEmptyState.classList.add("hidden");
+          dom.stageCanvasView.classList.remove("hidden");
+          dom.pageNavControls.classList.remove("hidden");
+          dom.pageCounter.textContent = state.currentPage + " / " + state.totalPages;
+          dom.prevPageBtn.disabled = state.currentPage <= 1;
+          dom.nextPageBtn.disabled = state.currentPage >= state.totalPages;
+
+          const seq = ++renderSeq;
+          dom.canvasLoadingOverlay.classList.remove("hidden");
+
+          let loadingTask = null;
+          try {
+            ensureLibrariesLoaded();
+            loadingTask = window.pdfjsLib.getDocument({ data: state.pdfBytes.slice() });
+            const pdf = await loadingTask.promise;
+            const safePage = Math.max(1, Math.min(pdf.numPages, state.currentPage));
+            const page = await pdf.getPage(safePage);
+            const baseVp = page.getViewport({ scale: 1 });
+
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const availW = Math.max(240, Math.min(dom.stageContainer.clientWidth - 40, 720));
+            const scale = (availW / baseVp.width) * dpr;
+            const vp = page.getViewport({ scale });
+
+            if (seq !== renderSeq) return;
+
+            const canvas = dom.previewCanvas;
+            canvas.width = Math.floor(vp.width);
+            canvas.height = Math.floor(vp.height);
+            canvas.style.width = Math.floor(vp.width / dpr) + "px";
+            canvas.style.height = Math.floor(vp.height / dpr) + "px";
+
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            await page.render({ canvasContext: ctx, viewport: vp }).promise;
+
+            if (seq !== renderSeq) return;
+            state.pageDimsPt = { width: Math.round(baseVp.width), height: Math.round(baseVp.height) };
+            state.canvasCssWidth = Math.floor(vp.width / dpr);
+          } catch (err) {
+            if (seq === renderSeq) {
+              setStatus("error", err.message || "تعذر عرض معاينة الصفحة");
+            }
+          } finally {
+            if (loadingTask && typeof loadingTask.destroy === "function") {
+              try {
+                await loadingTask.destroy();
+              } catch (_) {}
+            }
+            if (seq === renderSeq) {
+              dom.canvasLoadingOverlay.classList.add("hidden");
+              syncStageSubtitle();
+              syncLiveWatermarkOverlay();
+              renderQuickPageStrip();
+            }
+          }
+        }
+
+        function setActiveTab(tab) {
+          state.activeTab = tab;
+          dom.panelSplit.classList.toggle("hidden", tab !== "split");
+          dom.panelPng.classList.toggle("hidden", tab !== "png");
+          dom.panelWatermark.classList.toggle("hidden", tab !== "watermark");
+
+          document.querySelectorAll("[data-nav-tab]").forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.navTab === tab);
+          });
+          document.querySelectorAll("[data-seg-tab]").forEach((btn) => {
+            const active = btn.dataset.segTab === tab;
+            btn.classList.toggle("active", active);
+            btn.setAttribute("aria-selected", String(active));
+          });
+          document.querySelectorAll("[data-mobile-tab]").forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.mobileTab === tab);
+          });
+
+          syncStageSubtitle();
+          syncLiveWatermarkOverlay();
+          renderQuickPageStrip();
+        }
+
+        function downloadFile(item) {
+          const a = document.createElement("a");
+          a.href = item.url;
+          a.download = item.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+
+        async function shareFile(item) {
+          try {
+            const webFile = new File([item.blob], item.name, { type: item.mimeType });
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [webFile] })) {
+              await navigator.share({
+                title: item.name,
+                text: "تمت المعالجة بواسطة موعد اللوز PDF PRO",
+                files: [webFile],
+              });
+              setStatus("success", "تمت مشاركة الملف: " + item.name);
+              return;
+            }
+          } catch (err) {
+            if (err && err.name === "AbortError") return;
+          }
+          downloadFile(item);
+          setStatus("success", "تم تنزيل الملف مباشرة: " + item.name);
+        }
+
+        function openPngModal(item) {
+          state.modalFile = item;
+          dom.pngModalTitle.textContent = item.name;
+          dom.pngModalImg.src = item.url;
+          dom.pngModalImg.alt = item.name;
+          dom.pngModal.classList.remove("hidden");
+        }
+
+        function closePngModal() {
+          state.modalFile = null;
+          dom.pngModal.classList.add("hidden");
+        }
+
+        function replaceOutputs(next) {
+          state.outputs.forEach((f) => URL.revokeObjectURL(f.url));
+          state.outputs = next;
+          renderOutputsList();
+        }
+
+        function renderOutputsList() {
+          const count = state.outputs.length;
+          dom.navOutputsBtn.textContent = count > 0 ? "الملفات الناتجة (" + count + ")" : "الملفات الناتجة";
+          dom.outputsSubtitle.textContent =
+            count === 0
+              ? "ستظهر هنا الملفات بعد تنفيذ التجزئة أو التحويل أو إضافة العلامة المائية"
+              : count + " " + (count === 1 ? "ملف جاهز" : "ملفات جاهزة") + " للتنزيل والمشاركة";
+
+          dom.outputsBulkActions.classList.toggle("hidden", count === 0);
+          dom.downloadZipBtn.classList.toggle("hidden", count <= 1);
+          dom.outputsEmpty.classList.toggle("hidden", count > 0);
+          dom.outputsList.classList.toggle("hidden", count === 0);
+          dom.outputsList.innerHTML = "";
+
+          state.outputs.forEach((item) => {
+            const isPng = item.mimeType === "image/png";
+            const li = document.createElement("li");
+            li.className = "output-item";
+
+            const left = document.createElement("div");
+            left.className = "output-left";
+
+            if (isPng) {
+              const thumbBtn = document.createElement("button");
+              thumbBtn.type = "button";
+              thumbBtn.className = "output-thumb";
+              thumbBtn.setAttribute("aria-label", "معاينة " + item.name);
+              const img = document.createElement("img");
+              img.src = item.url;
+              img.alt = item.name;
+              img.referrerPolicy = "no-referrer";
+              thumbBtn.appendChild(img);
+              thumbBtn.addEventListener("click", () => openPngModal(item));
+              left.appendChild(thumbBtn);
+            } else {
+              const pdfBox = document.createElement("div");
+              pdfBox.className = "output-thumb";
+              pdfBox.style.cursor = "default";
+              pdfBox.textContent = "PDF";
+              left.appendChild(pdfBox);
+            }
+
+            const info = document.createElement("div");
+            info.className = "output-info";
+            const nameEl = document.createElement("div");
+            nameEl.className = "output-name";
+            nameEl.dir = "auto";
+            nameEl.title = item.name;
+            nameEl.textContent = item.name;
+
+            const metaEl = document.createElement("div");
+            metaEl.className = "output-meta";
+            metaEl.innerHTML =
+              "<span>" +
+              (isPng ? "صورة PNG" : "مستند PDF") +
+              '</span><span aria-hidden="true">·</span><span class="tabular">' +
+              item.detail +
+              '</span><span aria-hidden="true">·</span><span class="mono">' +
+              formatFileSize(item.size) +
+              "</span>";
+
+            info.appendChild(nameEl);
+            info.appendChild(metaEl);
+            left.appendChild(info);
+
+            const actions = document.createElement("div");
+            actions.className = "output-actions";
+
+            if (isPng) {
+              const previewBtn = document.createElement("button");
+              previewBtn.type = "button";
+              previewBtn.className = "btn btn-ghost";
+              previewBtn.textContent = "معاينة";
+              previewBtn.addEventListener("click", () => openPngModal(item));
+              actions.appendChild(previewBtn);
+            }
+
+            const dlBtn = document.createElement("button");
+            dlBtn.type = "button";
+            dlBtn.className = "btn btn-ghost-accent";
+            dlBtn.textContent = "تنزيل";
+            dlBtn.addEventListener("click", () => {
+              downloadFile(item);
+              setStatus("success", "بدأ تنزيل الملف: " + item.name);
+            });
+            actions.appendChild(dlBtn);
+
+            const shareBtn = document.createElement("button");
+            shareBtn.type = "button";
+            shareBtn.className = "btn btn-ghost";
+            shareBtn.textContent = "مشاركة";
+            shareBtn.addEventListener("click", () => shareFile(item));
+            actions.appendChild(shareBtn);
+
+            li.appendChild(left);
+            li.appendChild(actions);
+            dom.outputsList.appendChild(li);
+          });
+        }
+
+        async function loadPdfBytes(bytes, resolvedName) {
+          setBusy(true, 20);
+          try {
+            ensureLibrariesLoaded();
+            const doc = await window.PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+            const pageCount = doc.getPageCount();
+            if (pageCount <= 0) throw new Error("ملف PDF لا يحتوي على صفحات");
+
+            state.pdfBytes = bytes;
+            state.fileName = resolvedName;
+            state.fileSize = bytes.byteLength;
+            state.totalPages = pageCount;
+            state.currentPage = 1;
+
+            const defaultSplit =
+              pageCount >= 6
+                ? "1-3,4-6"
+                : pageCount >= 2
+                  ? "1-" + Math.ceil(pageCount / 2) + "," + (Math.ceil(pageCount / 2) + 1) + "-" + pageCount
+                  : "1";
+
+            state.ranges = defaultSplit;
+            state.pngPageFrom = "1";
+            state.pngPageTo = String(pageCount);
+            state.watermark.pageFrom = "1";
+            state.watermark.pageTo = String(pageCount);
+
+            dom.activeFileName.textContent = resolvedName;
+            dom.activeFileName.title = resolvedName;
+            dom.activeFileMeta.innerHTML =
+              "<span>عدد الصفحات: " +
+              pageCount +
+              '</span><span aria-hidden="true">·</span><span class="mono">' +
+              formatFileSize(bytes.byteLength) +
+              "</span>";
+            dom.panelPickLabel.textContent = "تغيير الملف";
+            dom.panelSampleBtn.classList.add("hidden");
+
+            dom.splitRangesInput.value = defaultSplit;
+            dom.pngFromInput.value = "1";
+            dom.pngToInput.value = String(pageCount);
+            dom.wmFromInput.value = "1";
+            dom.wmToInput.value = String(pageCount);
+
+            syncSplitFeedback();
+            await renderCurrentPreviewPage();
+            updateProgress(100);
+            setStatus("success", "تم اختيار الملف بنجاح (" + pageCount + " صفحة)");
+          } catch (err) {
+            setStatus("error", "خطأ في فتح الملف: " + (err.message || "ملف PDF غير صالح"));
+          } finally {
+            setBusy(false, 0);
+          }
+        }
+
+        async function handleSelectedFile(file) {
+          if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+            setStatus("error", "يرجى اختيار ملف بصيغة PDF فقط.");
+            return;
+          }
+          const buffer = await file.arrayBuffer();
+          await loadPdfBytes(new Uint8Array(buffer), file.name);
+        }
+
+        async function createSampleArabicPdf() {
+          ensureLibrariesLoaded();
+          if (document.fonts && document.fonts.ready) await document.fonts.ready;
+
+          const sections = [
+            {
+              number: "01",
+              title: "ملخص التقرير الإداري السنوي",
+              subtitle: "إدارة الوثائق والأرشفة الإلكترونية — نسخة نموذجية للاختبار",
+              body: [
+                "يهدف هذا المستند النموذجي المكون من ست صفحات إلى تمكينك من تجربة جميع",
+                "أدوات موعد اللوز PDF PRO بشكل فوري قبل رفع ملفاتك الخاصة.",
+                "يمكنك تجزئة الملف وفق نطاقات مخصصة مثل 1-3,4-6، أو تحويل صفحاته",
+                "إلى صور PNG فائقة الوضوح، أو إضافة علامة مائية عربية متناسقة.",
+              ],
+              metric: "إجمالي الصفحات: 6 صفحات قياسية A4",
+            },
+            {
+              number: "02",
+              title: "معايير تنظيم وتجزئة المستندات",
+              subtitle: "تقسيم العقود والتقارير إلى ملفات مستقلة بدقة تامة",
+              body: [
+                "عند التعامل مع ملفات كبيرة الحجم، يتيح لك تقسيم المستند حسب النطاقات",
+                "استخراج الفصول المطلوبة فقط ومشاركتها بسهولة مع فرق العمل والعملاء.",
+                "تُحفظ البنية الأصلية لكل صفحة دون أي فقدان في الجودة أو الهوامش.",
+              ],
+              metric: "نطاق مقترح للتجربة: 1-3,4-6",
+            },
+            {
+              number: "03",
+              title: "جودة التصدير إلى صور PNG",
+              subtitle: "تحويل الصفحات لعروض التقديم والمراجعة البصرية",
+              body: [
+                "يدعم المحرك التصدير بدقات متعددة تصل إلى 3x لضمان وضوح النصوص",
+                "والجداول العربية عند إدراجها في التقارير المصورة أو تطبيقات المراسلة.",
+                "تتم المعالجة بالكامل محلياً داخل متصفحك للحفاظ على خصوصية مستنداتك.",
+              ],
+              metric: "الدقة الافتراضية: 2x (جودة عالية)",
+            },
+            {
+              number: "04",
+              title: "حماية الحقوق بالعلامات المائية العربية",
+              subtitle: "دعم كامل لتشكيل الحروف العربية والاتجاه من اليمين لليسار",
+              body: [
+                "تُصمَّم العلامة المائية عبر طبقة رسومية عالية الدقة تضمن ترابط الحروف",
+                "العربية بشكل سليم تماماً دون تقطع أو انقلاب، مع تحكم كامل في الشفافية",
+                "والحجم واللون والموضع القطري أو المتكرر على الصفحات المختارة.",
+              ],
+              metric: "نص افتراضي: موعد اللوز العبيدي",
+            },
+            {
+              number: "05",
+              title: "جدول المراجعة والتدقيق الداخلي",
+              subtitle: "قائمة التحقق قبل اعتماد النسخة النهائية للمستند",
+              body: [
+                "١. التأكد من تسلسل أرقام الصفحات في كل جزء بعد التجزئة.",
+                "٢. مراجعة وضوح العلامة المائية بحيث لا تحجب النصوص الأساسية.",
+                "٣. حفظ حزمة الملفات الناتجة بصيغة ZIP أو مشاركتها مباشرة.",
+              ],
+              metric: "الحالة: جاهز للمعاينة والتصدير",
+            },
+            {
+              number: "06",
+              title: "الخاتمة وبيانات الاعتماد",
+              subtitle: "موعد اللوز PDF PRO — أدوات معالجة PDF سريعة وآمنة",
+              body: [
+                "تم إنشاء هذه الصفحات الست برمجياً كملف PDF حقيقي قابل للطباعة",
+                "والمعالجة الفورية. يمكنك في أي وقت اختيار أي ملف PDF من جهازك",
+                "عبر زر اختيار PDF في الشريط العلوي أو بسحب الملف وإفلاته هنا.",
+              ],
+              metric: "الصفحة الأخيرة · 6 / 6",
+            },
+          ];
+
+          const pdfDoc = await window.PDFLib.PDFDocument.create();
+          const pageW = 595.28;
+          const pageH = 841.89;
+          const cw = 1190;
+          const ch = 1684;
+
+          for (let i = 0; i < sections.length; i++) {
+            const sec = sections[i];
+            const canvas = document.createElement("canvas");
+            canvas.width = cw;
+            canvas.height = ch;
+            const ctx = canvas.getContext("2d");
+
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, cw, ch);
+            ctx.fillStyle = "#1565C0";
+            ctx.fillRect(80, 90, cw - 160, 6);
+
+            ctx.direction = "rtl";
+            ctx.textAlign = "right";
+            ctx.fillStyle = "#1565C0";
+            ctx.font = '700 28px "Cairo", sans-serif';
+            ctx.fillText("موعد اللوز PDF PRO", cw - 80, 150);
+
+            ctx.textAlign = "left";
+            ctx.fillStyle = "#64748B";
+            ctx.font = '600 24px "JetBrains Mono", monospace';
+            ctx.fillText("PAGE " + (i + 1) + " / " + sections.length, 80, 150);
+
+            ctx.textAlign = "right";
+            ctx.fillStyle = "#94A3B8";
+            ctx.font = '700 32px "JetBrains Mono", monospace';
+            ctx.fillText(sec.number, cw - 80, 270);
+
+            ctx.fillStyle = "#0F172A";
+            ctx.font = '800 54px "Cairo", sans-serif';
+            ctx.fillText(sec.title, cw - 80, 355);
+
+            ctx.fillStyle = "#475569";
+            ctx.font = '600 30px "IBM Plex Sans Arabic", "Cairo", sans-serif';
+            ctx.fillText(sec.subtitle, cw - 80, 420);
+
+            ctx.fillStyle = "#E2E8F0";
+            ctx.fillRect(80, 465, cw - 160, 2);
+
+            ctx.fillStyle = "#1E293B";
+            ctx.font = '400 32px "IBM Plex Sans Arabic", "Cairo", sans-serif';
+            sec.body.forEach((line, idx) => {
+              ctx.fillText(line, cw - 80, 560 + idx * 72);
+            });
+
+            ctx.fillStyle = "#F8FAFC";
+            ctx.fillRect(80, 930, cw - 160, 130);
+            ctx.strokeStyle = "#E2E8F0";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(80, 930, cw - 160, 130);
+
+            ctx.fillStyle = "#1565C0";
+            ctx.font = '700 30px "Cairo", sans-serif';
+            ctx.fillText(sec.metric, cw - 120, 1005);
+
+            ctx.fillStyle = "#E2E8F0";
+            ctx.fillRect(80, ch - 130, cw - 160, 2);
+            ctx.textAlign = "right";
+            ctx.fillStyle = "#64748B";
+            ctx.font = '500 24px "IBM Plex Sans Arabic", "Cairo", sans-serif';
+            ctx.fillText("مستند نموذجي للمعاينة والاختبار — موعد اللوز PDF PRO", cw - 80, ch - 80);
+
+            ctx.textAlign = "left";
+            ctx.font = '600 24px "JetBrains Mono", monospace';
+            ctx.fillText(i + 1 + " / " + sections.length, 80, ch - 80);
+
+            const blob = await new Promise((res) => canvas.toBlob(res, "image/png"));
+            const pngBytes = new Uint8Array(await blob.arrayBuffer());
+            const img = await pdfDoc.embedPng(pngBytes);
+            const page = pdfDoc.addPage([pageW, pageH]);
+            page.drawImage(img, { x: 0, y: 0, width: pageW, height: pageH });
+          }
+
+          return {
+            bytes: await pdfDoc.save(),
+            name: "تقرير_موعد_اللوز_النموذجي.pdf",
+          };
+        }
+
+        async function handleLoadSample() {
+          setBusy(true, 15);
+          setStatus("info", "جارٍ إنشاء ملف PDF عربي نموذجي من 6 صفحات...");
+          try {
+            const sample = await createSampleArabicPdf();
+            await loadPdfBytes(sample.bytes, sample.name);
+          } catch (err) {
+            setBusy(false, 0);
+            setStatus("error", "تعذر إنشاء الملف النموذجي: " + (err.message || "خطأ غير متوقع"));
+          }
+        }
+
+        async function renderArabicWatermarkPng(pageW, pageH, wm) {
+          if (document.fonts && document.fonts.ready) await document.fonts.ready;
+
+          const scale = 2;
+          const maxDim = 2400;
+          const rawW = pageW * scale;
+          const rawH = pageH * scale;
+          const factor = Math.min(1, maxDim / Math.max(rawW, rawH));
+
+          const w = Math.max(200, Math.round(rawW * factor));
+          const h = Math.max(200, Math.round(rawH * factor));
+          const effScale = w / pageW;
+
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+
+          ctx.clearRect(0, 0, w, h);
+          ctx.direction = "rtl";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillStyle = wm.color;
+          ctx.globalAlpha = Math.max(0.05, Math.min(1, wm.opacity));
+
+          const fontPx = Math.max(12, Math.round(wm.fontSize * effScale));
+          ctx.font = '700 ' + fontPx + 'px "Cairo", "IBM Plex Sans Arabic", sans-serif';
+
+          const lines = wm.text
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean);
+
+          function drawLines(cx, cy) {
+            const lh = fontPx * 1.35;
+            const totalH = (lines.length - 1) * lh;
+            lines.forEach((line, idx) => {
+              ctx.fillText(line, cx, cy - totalH / 2 + idx * lh);
+            });
+          }
+
+          if (wm.position === "diagonal") {
+            ctx.save();
+            ctx.translate(w / 2, h / 2);
+            ctx.rotate((-35 * Math.PI) / 180);
+            drawLines(0, 0);
+            ctx.restore();
+          } else if (wm.position === "center") {
+            drawLines(w / 2, h / 2);
+          } else if (wm.position === "top") {
+            drawLines(w / 2, Math.max(fontPx * 1.4, h * 0.08));
+          } else if (wm.position === "bottom") {
+            drawLines(w / 2, h - Math.max(fontPx * 1.4, h * 0.08));
+          } else if (wm.position === "tiled") {
+            const maxLineW = Math.max(...lines.map((l) => ctx.measureText(l).width), fontPx * 4);
+            const stepX = Math.max(maxLineW + fontPx * 2.2, w * 0.38);
+            const stepY = Math.max(fontPx * 4.2, h * 0.22);
+            ctx.save();
+            ctx.translate(w / 2, h / 2);
+            ctx.rotate((-30 * Math.PI) / 180);
+            const span = Math.hypot(w, h);
+            for (let y = -span / 2; y <= span / 2; y += stepY) {
+              for (let x = -span / 2; x <= span / 2; x += stepX) {
+                drawLines(x, y);
+              }
+            }
+            ctx.restore();
+          }
+
+          const blob = await new Promise((res) => canvas.toBlob(res, "image/png"));
+          return new Uint8Array(await blob.arrayBuffer());
+        }
+
+        // Event Listeners
+        const triggerPick = () => dom.fileInput.click();
+        dom.headerPickBtn.addEventListener("click", triggerPick);
+        dom.panelPickBtn.addEventListener("click", triggerPick);
+        dom.stagePickBtn.addEventListener("click", triggerPick);
+        dom.panelSampleBtn.addEventListener("click", handleLoadSample);
+        dom.stageSampleBtn.addEventListener("click", handleLoadSample);
+
+        dom.fileInput.addEventListener("change", () => {
+          const picked = dom.fileInput.files && dom.fileInput.files[0];
+          if (picked) handleSelectedFile(picked);
+          dom.fileInput.value = "";
+        });
+
+        dom.navOutputsBtn.addEventListener("click", () => {
+          dom.outputsSection.scrollIntoView({ behavior: "smooth" });
+        });
+
+        document.querySelectorAll("[data-nav-tab]").forEach((btn) => {
+          btn.addEventListener("click", () => setActiveTab(btn.dataset.navTab));
+        });
+        document.querySelectorAll("[data-seg-tab]").forEach((btn) => {
+          btn.addEventListener("click", () => setActiveTab(btn.dataset.segTab));
+        });
+        document.querySelectorAll("[data-mobile-tab]").forEach((btn) => {
+          btn.addEventListener("click", () => setActiveTab(btn.dataset.mobileTab));
+        });
+
+        // Drag & Drop
+        dom.previewDropzone.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          dom.previewDropzone.classList.add("drag-active");
+        });
+        dom.previewDropzone.addEventListener("dragleave", (e) => {
+          e.preventDefault();
+          dom.previewDropzone.classList.remove("drag-active");
+        });
+        dom.previewDropzone.addEventListener("drop", (e) => {
+          e.preventDefault();
+          dom.previewDropzone.classList.remove("drag-active");
+          const dropped = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+          if (dropped) handleSelectedFile(dropped);
+        });
+
+        // Page Navigation
+        dom.prevPageBtn.addEventListener("click", () => {
+          if (state.currentPage > 1) {
+            state.currentPage--;
+            renderCurrentPreviewPage();
+          }
+        });
+        dom.nextPageBtn.addEventListener("click", () => {
+          if (state.currentPage < state.totalPages) {
+            state.currentPage++;
+            renderCurrentPreviewPage();
+          }
+        });
+
+        // Responsive Resize Re-render (debounced)
+        let resizeTimer = null;
+        window.addEventListener("resize", () => {
+          if (!state.pdfBytes) return;
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(() => {
+            renderCurrentPreviewPage();
+          }, 220);
+        });
+
+        // Split PDF Handlers
+        dom.splitRangesInput.addEventListener("input", () => {
+          state.ranges = dom.splitRangesInput.value;
+          syncSplitFeedback();
+          syncStageSubtitle();
+          renderQuickPageStrip();
+        });
+
+        dom.presetHalfBtn.addEventListener("click", () => {
+          if (state.totalPages < 2) {
+            state.ranges = "1";
+          } else {
+            const mid = Math.ceil(state.totalPages / 2);
+            state.ranges = "1-" + mid + "," + (mid + 1) + "-" + state.totalPages;
+          }
+          dom.splitRangesInput.value = state.ranges;
+          syncSplitFeedback();
+          syncStageSubtitle();
+          renderQuickPageStrip();
+        });
+
+        dom.presetEveryBtn.addEventListener("click", () => {
+          const cap = Math.min(state.totalPages, 30);
+          const list = [];
+          for (let i = 1; i <= cap; i++) list.push(i);
+          state.ranges = list.join(",");
+          dom.splitRangesInput.value = state.ranges;
+          syncSplitFeedback();
+          syncStageSubtitle();
+          renderQuickPageStrip();
+        });
+
+        dom.presetFirstBtn.addEventListener("click", () => {
+          state.ranges = "1";
+          dom.splitRangesInput.value = "1";
+          syncSplitFeedback();
+          syncStageSubtitle();
+          renderQuickPageStrip();
+        });
+
+        dom.runSplitBtn.addEventListener("click", async () => {
+          if (!state.pdfBytes) return;
+          setBusy(true, 10);
+          try {
+            ensureLibrariesLoaded();
+            const srcDoc = await window.PDFLib.PDFDocument.load(state.pdfBytes, {
+              ignoreEncryption: true,
+            });
+            const parsed = parsePageRanges(state.ranges, srcDoc.getPageCount());
+            const base = stripPdfExt(state.fileName);
+            const list = [];
+
+            for (let i = 0; i < parsed.length; i++) {
+              const range = parsed[i];
+              const newDoc = await window.PDFLib.PDFDocument.create();
+              const copied = await newDoc.copyPages(
+                srcDoc,
+                range.pages.map((p) => p - 1)
+              );
+              copied.forEach((pg) => newDoc.addPage(pg));
+              const outBytes = await newDoc.save();
+              const blob = new Blob([outBytes], { type: "application/pdf" });
+              list.push({
+                name: base + "_part" + (i + 1) + "_p" + range.label + ".pdf",
+                mimeType: "application/pdf",
+                blob,
+                url: URL.createObjectURL(blob),
+                size: blob.size,
+                detail:
+                  range.pages.length === 1
+                    ? "صفحة " + range.start
+                    : "الصفحات " + range.start + "–" + range.end + " (" + range.pages.length + " صفحات)",
+              });
+              updateProgress(Math.round(((i + 1) / parsed.length) * 100));
+            }
+
+            replaceOutputs(list);
+            setStatus(
+              "success",
+              "تم إنشاء " +
+                list.length +
+                " " +
+                (list.length === 1 ? "ملف" : "ملفات") +
+                " بنجاح وأصبحت جاهزة للتنزيل والمشاركة"
+            );
+          } catch (err) {
+            setStatus("error", "تعذر التجزئة: " + (err.message || "خطأ غير متوقع"));
+          } finally {
+            setBusy(false, 0);
+          }
+        });
+
+        // PNG Handlers
+        document.querySelectorAll("[data-png-scale]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const scale = parseInt(btn.dataset.pngScale, 10);
+            state.pngScale = scale;
+            dom.runPngLabel.textContent = "تحويل إلى PNG بدقة " + scale + "x";
+            document.querySelectorAll("[data-png-scale]").forEach((b) => {
+              b.classList.toggle("active", parseInt(b.dataset.pngScale, 10) === scale);
+            });
+            syncStageSubtitle();
+          });
+        });
+
+        dom.pngFromInput.addEventListener("input", () => {
+          state.pngPageFrom = dom.pngFromInput.value;
+        });
+        dom.pngToInput.addEventListener("input", () => {
+          state.pngPageTo = dom.pngToInput.value;
+        });
+
+        dom.runPngBtn.addEventListener("click", async () => {
+          if (!state.pdfBytes) return;
+          const from = parseInt(normalizeDigits(state.pngPageFrom), 10);
+          const to = parseInt(normalizeDigits(state.pngPageTo), 10);
+          if (
+            isNaN(from) ||
+            isNaN(to) ||
+            from < 1 ||
+            to < 1 ||
+            from > state.totalPages ||
+            to > state.totalPages ||
+            from > to
+          ) {
+            setStatus("error", "نطاق صفحات التحويل غير صالح (اختر بين 1 و " + state.totalPages + ")");
+            return;
+          }
+
+          setBusy(true, 5);
+          let loadingTask = null;
+          try {
+            ensureLibrariesLoaded();
+            loadingTask = window.pdfjsLib.getDocument({ data: state.pdfBytes.slice() });
+            const pdf = await loadingTask.promise;
+            const totalToConvert = to - from + 1;
+            const base = stripPdfExt(state.fileName);
+            const list = [];
+
+            for (let p = from; p <= to; p++) {
+              const page = await pdf.getPage(p);
+              const vp = page.getViewport({ scale: state.pngScale });
+              const c = document.createElement("canvas");
+              c.width = Math.max(1, Math.floor(vp.width));
+              c.height = Math.max(1, Math.floor(vp.height));
+              const ctx = c.getContext("2d");
+              ctx.fillStyle = "#FFFFFF";
+              ctx.fillRect(0, 0, c.width, c.height);
+              await page.render({ canvasContext: ctx, viewport: vp }).promise;
+
+              const blob = await new Promise((res, rej) => {
+                c.toBlob((b) => (b ? res(b) : rej(new Error("تعذر تصدير الصفحة " + p))), "image/png");
+              });
+              const padded = String(p).padStart(String(pdf.numPages).length, "0");
+              list.push({
+                name: base + "_page_" + padded + ".png",
+                mimeType: "image/png",
+                blob,
+                url: URL.createObjectURL(blob),
+                size: blob.size,
+                detail: "صفحة " + p + " · " + c.width + "×" + c.height + " بكسل (" + state.pngScale + "x)",
+              });
+              updateProgress(Math.round(((p - from + 1) / totalToConvert) * 100));
+            }
+
+            replaceOutputs(list);
+            setStatus(
+              "success",
+              "تم تحويل " + list.length + " صفحة إلى صور PNG بدقة " + state.pngScale + "x بنجاح"
+            );
+          } catch (err) {
+            setStatus("error", "خطأ في التحويل: " + (err.message || "خطأ غير متوقع"));
+          } finally {
+            if (loadingTask && typeof loadingTask.destroy === "function") {
+              try {
+                await loadingTask.destroy();
+              } catch (_) {}
+            }
+            setBusy(false, 0);
+          }
+        });
+
+        // Watermark Handlers
+        dom.wmTextInput.addEventListener("input", () => {
+          state.watermark.text = dom.wmTextInput.value;
+          syncActionButtons();
+          syncStageSubtitle();
+          syncLiveWatermarkOverlay();
+        });
+        dom.wmFromInput.addEventListener("input", () => {
+          state.watermark.pageFrom = dom.wmFromInput.value;
+          syncStageSubtitle();
+          syncLiveWatermarkOverlay();
+        });
+        dom.wmToInput.addEventListener("input", () => {
+          state.watermark.pageTo = dom.wmToInput.value;
+          syncStageSubtitle();
+          syncLiveWatermarkOverlay();
+        });
+        dom.wmOpacity.addEventListener("input", () => {
+          state.watermark.opacity = parseFloat(dom.wmOpacity.value);
+          dom.wmOpacityVal.textContent = Math.round(state.watermark.opacity * 100) + "%";
+          syncLiveWatermarkOverlay();
+        });
+        dom.wmSize.addEventListener("input", () => {
+          state.watermark.fontSize = parseInt(dom.wmSize.value, 10);
+          dom.wmSizeVal.textContent = state.watermark.fontSize + " pt";
+          syncLiveWatermarkOverlay();
+        });
+
+        document.querySelectorAll("[data-wm-pos]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            state.watermark.position = btn.dataset.wmPos;
+            document.querySelectorAll("[data-wm-pos]").forEach((b) => {
+              b.classList.toggle("active", b.dataset.wmPos === state.watermark.position);
+            });
+            syncLiveWatermarkOverlay();
+          });
+        });
+
+        document.querySelectorAll("[data-wm-color]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            state.watermark.color = btn.dataset.wmColor;
+            document.querySelectorAll("[data-wm-color]").forEach((b) => {
+              b.classList.toggle("active", b.dataset.wmColor === state.watermark.color);
+            });
+            syncLiveWatermarkOverlay();
+          });
+        });
+
+        dom.runWatermarkBtn.addEventListener("click", async () => {
+          if (!state.pdfBytes) return;
+          const text = state.watermark.text.trim();
+          const from = parseInt(normalizeDigits(state.watermark.pageFrom), 10);
+          const to = parseInt(normalizeDigits(state.watermark.pageTo), 10);
+          if (!text) {
+            setStatus("error", "يرجى إدخال نص العلامة المائية أولاً");
+            return;
+          }
+          if (
+            isNaN(from) ||
+            isNaN(to) ||
+            from < 1 ||
+            to < 1 ||
+            from > state.totalPages ||
+            to > state.totalPages ||
+            from > to
+          ) {
+            setStatus("error", "نطاق الصفحات غير صالح (اختر بين 1 و " + state.totalPages + ")");
+            return;
+          }
+
+          setBusy(true, 10);
+          try {
+            ensureLibrariesLoaded();
+            const pdfDoc = await window.PDFLib.PDFDocument.load(state.pdfBytes, {
+              ignoreEncryption: true,
+            });
+            const count = to - from + 1;
+            const cache = new Map();
+
+            for (let p = from; p <= to; p++) {
+              const page = pdfDoc.getPage(p - 1);
+              const { width, height } = page.getSize();
+              const key = Math.round(width) + "x" + Math.round(height);
+              let embedded = cache.get(key);
+              if (!embedded) {
+                const pngBytes = await renderArabicWatermarkPng(width, height, state.watermark);
+                embedded = await pdfDoc.embedPng(pngBytes);
+                cache.set(key, embedded);
+              }
+              page.drawImage(embedded, { x: 0, y: 0, width, height });
+              updateProgress(Math.round(((p - from + 1) / count) * 100));
+            }
+
+            const outBytes = await pdfDoc.save();
+            const blob = new Blob([outBytes], { type: "application/pdf" });
+            const outName = stripPdfExt(state.fileName) + "_watermarked.pdf";
+
+            replaceOutputs([
+              {
+                name: outName,
+                mimeType: "application/pdf",
+                blob,
+                url: URL.createObjectURL(blob),
+                size: blob.size,
+                detail: "علامة مائية على الصفحات " + from + "–" + to,
+              },
+            ]);
+            setStatus("success", "تم تحرير الملف وإضافة العلامة المائية بنجاح: " + outName);
+          } catch (err) {
+            setStatus("error", "خطأ: " + (err.message || "تعذر إضافة العلامة المائية"));
+          } finally {
+            setBusy(false, 0);
+          }
+        });
+
+        // Bulk ZIP & Clear
+        dom.downloadZipBtn.addEventListener("click", async () => {
+          if (!state.outputs.length) return;
+          dom.downloadZipBtn.disabled = true;
+          dom.downloadZipBtn.textContent = "جارٍ الضغط...";
+          try {
+            ensureLibrariesLoaded();
+            const zip = new window.JSZip();
+            state.outputs.forEach((f) => zip.file(f.name, f.blob));
+            const blob = await zip.generateAsync({ type: "blob" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "MuedPdfPro_Outputs.zip";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+            setStatus("success", "تم تنزيل حزمة ZIP تحتوي على " + state.outputs.length + " ملفات");
+          } catch (err) {
+            setStatus("error", "تعذر ضغط الملفات: " + (err.message || "خطأ غير متوقع"));
+          } finally {
+            dom.downloadZipBtn.disabled = false;
+            dom.downloadZipBtn.textContent = "تنزيل الكل (ZIP)";
+          }
+        });
+
+        dom.clearOutputsBtn.addEventListener("click", () => {
+          replaceOutputs([]);
+          setStatus("info", "تم مسح قائمة الملفات الناتجة");
+        });
+
+        // Modal Handlers
+        dom.pngModal.addEventListener("click", closePngModal);
+        dom.pngModalCard.addEventListener("click", (e) => e.stopPropagation());
+        dom.pngModalClose.addEventListener("click", closePngModal);
+        dom.pngModalDownload.addEventListener("click", () => {
+          if (state.modalFile) downloadFile(state.modalFile);
+        });
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && state.modalFile) closePngModal();
+        });
+        window.addEventListener("beforeunload", () => {
+          state.outputs.forEach((f) => URL.revokeObjectURL(f.url));
+        });
+
+        syncActionButtons();
+      })();
+    </script>
   </body>
 </html>
