@@ -1,0 +1,6 @@
+{
+  "name": "موعد اللوز PDF PRO",
+  "description": "أداة احترافية لتجزئة ملفات PDF وتحويلها إلى صور PNG وإضافة علامات مائية عربية بدقة عالية مباشرة من المتصفح.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
